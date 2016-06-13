@@ -21,28 +21,96 @@
 
 package im.r_c.android.fusioncache;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * FusionCache
  * Created by richard on 6/12/16.
  */
-public class MemCache implements KeyValueCache {
+public class MemCache extends AbstractCache {
+    private LruCacheWrapper<String, Object> mCacheWrapper;
+
+    public MemCache(int maxCacheSize) {
+        mCacheWrapper = new LruCacheWrapper<String, Object>(maxCacheSize) {
+            @Override
+            protected int sizeOf(String key, Object value) {
+                return MemoryUtils.sizeOf(value);
+            }
+        };
+    }
+
     @Override
-    public void put(String key, Object object) {
+    public void put(String key, String value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, JSONObject value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, JSONArray value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, byte[] value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, Bitmap value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, Drawable value) {
+        putObject(key, value);
+    }
+
+    @Override
+    public void put(String key, Serializable value) {
+        putObject(key, value);
+    }
+
+    void putObject(String key, Object value) {
+        if (MemoryUtils.sizeOf(value) <= maxSize()) {
+            mCacheWrapper.put(key, value);
+        }
     }
 
     @Override
     public Object get(String key) {
-        return null;
+        return mCacheWrapper.get(key);
     }
 
-    /**
-     *
-     * @return Removed eldest cache items
-     */
-    List<Object> putInternal(String key, Object object) {
-        // Items in the returned list may be stored in DiskCache
-        return null;
+    @Override
+    public Object remove(String key) {
+        return mCacheWrapper.remove(key);
+    }
+
+    public int size() {
+        return mCacheWrapper.size();
+    }
+
+    public int maxSize() {
+        return mCacheWrapper.maxSize();
+    }
+
+    public Map<String, Object> snapshot() {
+        return mCacheWrapper.snapshot();
+    }
+
+    Object put(String key, Object value, List<LruCacheWrapper.Entry<String, Object>> evictedEntryList) {
+        return mCacheWrapper.put(key, value, evictedEntryList);
     }
 }

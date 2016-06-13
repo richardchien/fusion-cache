@@ -21,53 +21,141 @@
 
 package im.r_c.android.fusioncache;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * FusionCache
  * Created by richard on 6/12/16.
  */
-public class FusionCache implements KeyValueCache {
-    private boolean mFusionModeEnabled;
+public class FusionCache extends AbstractCache {
+    private static final String LOG_TAG = "FusionCache";
+
+    private static final String DEFAULT_DISK_CACHE_DIR_NAME = "FusionCache";
+
+    private Context mAppContext;
     private MemCache mMemCache;
     private DiskCache mDiskCache;
+    private int mMaxMemCacheSize;
+    private int mMaxDiskCacheSize;
+    private String mDiskCacheDirName;
+    private boolean mFusionModeEnabled;
 
-    public FusionCache() {
-        this(true);
+    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize) {
+        this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, true);
     }
 
-    public FusionCache(boolean enableFusionMode) {
+    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, boolean enableFusionMode) {
+        this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, enableFusionMode);
+    }
+
+    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, String diskCacheSizeName) {
+        this(context, maxMemCacheSize, maxDiskCacheSize, diskCacheSizeName, true);
+    }
+
+    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, String diskCacheDirName, boolean enableFusionMode) {
+        if (maxMemCacheSize < 0 || maxDiskCacheSize < 0) {
+            throw new IllegalArgumentException("Max cache size should be non-negative.");
+        }
+
+        mAppContext = context.getApplicationContext();
+        mMaxMemCacheSize = maxMemCacheSize;
+        mMaxDiskCacheSize = maxDiskCacheSize;
+        mDiskCacheDirName = diskCacheDirName;
         mFusionModeEnabled = enableFusionMode;
+
+        if (mMaxMemCacheSize > 0) {
+            mMemCache = new MemCache(mMaxMemCacheSize);
+        }
     }
 
     @Override
-    public void put(String key, Object object) {
-        if (!mFusionModeEnabled) {
-            // Fusion mode not enabled, so throw exception
-            throw new RuntimeException("Fusion mode is not enabled, so put() method can't be used.");
-        }
+    public void put(String key, String value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, JSONObject value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, JSONArray value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, byte[] value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, Bitmap value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, Drawable value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
+    }
+
+    @Override
+    public void put(String key, Serializable value) {
+        checkFusionMode();
+        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
 
     @Override
     public Object get(String key) {
-        if (!mFusionModeEnabled) {
-            // Fusion mode not enabled, so throw exception
-            throw new RuntimeException("Fusion mode is not enabled, so get() method can't be used.");
-        }
-        return null;
-    }
-
-    void putInMem(String key, Object object) {
-        mMemCache.put(key, object);
-    }
-
-    Object getFromMem(String key) {
         return mMemCache.get(key);
     }
 
-    void putInDisk(String key, Object object) {
-        mDiskCache.put(key, object);
+    @Override
+    public Object remove(String key) {
+        return mMemCache.remove(key);
     }
 
-    Object getFromDisk(String key) {
-        return mDiskCache.get(key);
+    public int memCacheSize() {
+        return mMemCache.size();
+    }
+
+    public int maxMemCacheSize() {
+        return mMaxMemCacheSize;
+    }
+
+    private void checkFusionMode() {
+        if (!mFusionModeEnabled) {
+            // Fusion mode not enabled, so throw exception
+            throw new IllegalStateException("Fusion mode is not enabled.");
+        }
     }
 }

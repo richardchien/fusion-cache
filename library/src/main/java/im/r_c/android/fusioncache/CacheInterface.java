@@ -21,9 +21,48 @@
 
 package im.r_c.android.fusioncache;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.Serializable;
+
 /**
  * FusionCache
  * Created by richard on 6/12/16.
  */
-public class DiskCache {
+interface CacheInterface {
+    void put(String key, String value);
+
+    void put(String key, JSONObject value);
+
+    void put(String key, JSONArray value);
+
+    void put(String key, byte[] value);
+
+    void put(String key, Bitmap value);
+
+    void put(String key, Drawable value);
+
+    void put(String key, Serializable value);
+
+    Object get(String key);
+
+    String getString(String key);
+
+    JSONObject getJSONObject(String key);
+
+    JSONArray getJSONArray(String key);
+
+    byte[] getBytes(String key);
+
+    Bitmap getBitmap(String key);
+
+    Drawable getDrawable(String key);
+
+    Serializable getSerializable(String key);
+
+    Object remove(String key);
 }

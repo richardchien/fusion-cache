@@ -23,9 +23,14 @@ package im.r_c.android.fusioncache;
 
 /**
  * FusionCache
- * Created by richard on 6/12/16.
+ * Created by richard on 6/13/16.
  */
-public interface KeyValueCache {
-    void put(String key, Object object);
-    Object get(String key);
+class Helper {
+    static <T> T getCache(CacheInterface cache, String key, Class<T> clz) {
+        Object value = cache.get(key);
+        if (value == null || !clz.isInstance(value)) {
+            return null;
+        }
+        return clz.cast(value);
+    }
 }
