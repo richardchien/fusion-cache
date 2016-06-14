@@ -81,7 +81,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, String value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -89,7 +89,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, JSONObject value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -97,7 +97,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, JSONArray value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -105,7 +105,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, byte[] value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -113,7 +113,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, Bitmap value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -121,7 +121,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, Drawable value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }
@@ -129,7 +129,7 @@ public class FusionCache extends AbstractCache {
     @Override
     public void put(String key, Serializable value) {
         checkFusionMode();
-        List<LruCacheWrapper.Entry<String, Object>> evictedList = new ArrayList<>();
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
         mMemCache.put(key, value, evictedList);
         Log.d(LOG_TAG, "evictedList: " + evictedList);
     }

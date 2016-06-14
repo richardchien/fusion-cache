@@ -36,13 +36,13 @@ import java.util.Map;
  * Created by richard on 6/12/16.
  */
 public class MemCache extends AbstractCache {
-    private LruCacheWrapper<String, Object> mCacheWrapper;
+    private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
 
     public MemCache(int maxCacheSize) {
-        mCacheWrapper = new LruCacheWrapper<String, Object>(maxCacheSize) {
+        mCacheWrapper = new LruCacheWrapper<String, ValueWrapper>(maxCacheSize) {
             @Override
-            protected int sizeOf(String key, Object value) {
-                return MemoryUtils.sizeOf(value);
+            protected int sizeOf(String key, ValueWrapper valueWrapper) {
+                return valueWrapper.size;
             }
         };
     }
@@ -83,14 +83,13 @@ public class MemCache extends AbstractCache {
     }
 
     void putObject(String key, Object value) {
-        if (MemoryUtils.sizeOf(value) <= maxSize()) {
-            mCacheWrapper.put(key, value);
-        }
+        put(key, value, null);
     }
 
     @Override
     public Object get(String key) {
-        return mCacheWrapper.get(key);
+        ValueWrapper wrapper =mCacheWrapper.get(key);
+        return wrapper == null ? null : wrapper.obj;
     }
 
     @Override
@@ -106,11 +105,28 @@ public class MemCache extends AbstractCache {
         return mCacheWrapper.maxSize();
     }
 
-    public Map<String, Object> snapshot() {
+    Map<String, ValueWrapper> snapshot() {
         return mCacheWrapper.snapshot();
     }
 
-    Object put(String key, Object value, List<LruCacheWrapper.Entry<String, Object>> evictedEntryList) {
-        return mCacheWrapper.put(key, value, evictedEntryList);
+    Object put(String key, Object value, List<LruCacheWrapper.Entry<String, ValueWrapper>> evictedEntryList) {
+        int size = MemoryUtils.sizeOf(value);
+        if (size <= maxSize()) {
+            return mCacheWrapper.put(key, new ValueWrapper(value, size), evictedEntryList);
+        }
+        return null;
+    }
+
+    static class ValueWrapper {
+        Object obj;
+        int size;
+
+        public ValueWrapper() {
+        }
+
+        public ValueWrapper(Object obj, int size) {
+            this.obj = obj;
+            this.size = size;
+        }
     }
 }

@@ -21,8 +21,12 @@
 
 package im.r_c.android.fusioncache.sample;
 
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+
+import im.r_c.android.fusioncache.FusionCache;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -31,6 +35,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        FusionCache cache = new FusionCache(this, 100, 0);
+        cache.put("a", "sfjkadgfh");
+        cache.put("b", BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+        Log.d(TAG, "" + cache.get("b"));
+        Log.d(TAG, "" + cache.get("a"));
+        Log.d(TAG, "size: " + cache.memCacheSize());
+        cache.put("a", "sdjafkgsakfgjkhkg");
+        Log.d(TAG, "size: " + cache.memCacheSize());
     }
 }
 
