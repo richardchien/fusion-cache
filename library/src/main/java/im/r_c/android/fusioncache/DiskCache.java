@@ -29,17 +29,22 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import im.r_c.android.fusioncache.util.BitmapUtils;
@@ -98,6 +103,14 @@ public class DiskCache extends AbstractCache {
                 }
             }
         };
+
+        // Try to restore journal, aka the state of mCacheWrapper when last used
+        List<LruCacheWrapper.Entry<String, ValueWrapper>> entryList = restoreJournal();
+        if (entryList != null && entryList.size() > 0) {
+            for (LruCacheWrapper.Entry<String, ValueWrapper> entry : entryList) {
+                mCacheWrapper.put(entry.key, entry.value);
+            }
+        }
     }
 
     @Override
@@ -122,7 +135,7 @@ public class DiskCache extends AbstractCache {
      * to actually store byte array into the disk.
      */
     @Override
-    public void put(String key, byte[] value) {
+    public synchronized void put(String key, byte[] value) {
         int valueSize = value.length;
         if (valueSize > maxSize()) {
             // Value size is bigger than max cache size
@@ -140,6 +153,9 @@ public class DiskCache extends AbstractCache {
             fos.write(value);
             fos.flush();
             mCacheWrapper.put(hashKey, new ValueWrapper(valueSize));
+
+            // Save journal file
+            saveJournal();
         } catch (java.io.IOException e) {
             e.printStackTrace();
         } finally {
@@ -224,7 +240,7 @@ public class DiskCache extends AbstractCache {
      * to get the primitive byte array and then convert to the type needed.
      */
     @Override
-    public byte[] getBytes(String key) {
+    public synchronized byte[] getBytes(String key) {
         // Get the hash value of the key
         // Never use the parameter "key" below
         String hashKey = hashKeyForDisk(key);
@@ -243,6 +259,9 @@ public class DiskCache extends AbstractCache {
                 byteArray = null;
             }
             mCacheWrapper.get(hashKey);
+
+            // Save journal file
+            saveJournal();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -288,6 +307,19 @@ public class DiskCache extends AbstractCache {
             result = ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+        } finally {
+            if (bais != null) {
+                try {
+                    bais.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (ois != null) {
+                try {
+                    ois.close();
+                } catch (IOException ignored) {
+                }
+            }
         }
 
         if (result == null || !(result instanceof Serializable)) {
@@ -302,7 +334,7 @@ public class DiskCache extends AbstractCache {
      * any action that gets a value must specify the type of the value.
      */
     @Override
-    public Object remove(String key) {
+    public synchronized Object remove(String key) {
         // Get the hash value of the key
         // Never use the parameter "key" below
         String hashKey = hashKeyForDisk(key);
@@ -312,21 +344,80 @@ public class DiskCache extends AbstractCache {
         file.delete();
 
         mCacheWrapper.remove(hashKey);
+
+        // Save journal file
+        saveJournal();
+
         return null;
     }
 
     @Override
-    public int size() {
+    public synchronized int size() {
         return mCacheWrapper.size();
     }
 
     @Override
-    public int maxSize() {
+    public synchronized int maxSize() {
         return mCacheWrapper.maxSize();
     }
 
     synchronized Map<String, ValueWrapper> snapshot() {
         return mCacheWrapper.snapshot();
+    }
+
+    synchronized void saveJournal() {
+        final Map<String, ValueWrapper> snapshot = snapshot();
+        File file = getJournalFile();
+        PrintWriter pw = null;
+        try {
+            pw = new PrintWriter(file);
+            for (String hashKey : snapshot.keySet()) {
+                pw.println(hashKey);
+            }
+            pw.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (pw != null) {
+                pw.close();
+            }
+        }
+    }
+
+    synchronized List<LruCacheWrapper.Entry<String, ValueWrapper>> restoreJournal() {
+        File journalFile = getJournalFile();
+        if (!journalFile.exists()) {
+            return null;
+        }
+
+        List<LruCacheWrapper.Entry<String, ValueWrapper>> list = new ArrayList<>();
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(journalFile));
+            String hashKey;
+            while ((hashKey = br.readLine()) != null) {
+                File cacheFile = new File(mCacheDir, hashKey);
+                if (!cacheFile.exists()) {
+                    continue;
+                }
+                list.add(new LruCacheWrapper.Entry<>(hashKey, new ValueWrapper((int) cacheFile.length())));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+
+        return list;
+    }
+
+    private File getJournalFile() {
+        return new File(mCacheDir, "journal");
     }
 
     /**

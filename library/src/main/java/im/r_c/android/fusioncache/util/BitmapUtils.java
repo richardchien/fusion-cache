@@ -34,6 +34,8 @@ import java.io.ByteArrayOutputStream;
 /**
  * FusionCache
  * Created by richard on 6/14/16.
+ *
+ * @author Richard Chien
  */
 public class BitmapUtils {
     public static byte[] bitmapToBytes(Bitmap bitmap) {

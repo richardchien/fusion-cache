@@ -32,6 +32,10 @@ import java.io.Serializable;
 /**
  * FusionCache
  * Created by richard on 6/12/16.
+ *
+ * An interface that defines basic functions a cache should provide.
+ *
+ * @author Richard Chien
  */
 interface Cache {
     void put(String key, String value);

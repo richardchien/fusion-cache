@@ -38,7 +38,12 @@ import java.util.List;
  * Created by richard on 6/12/16.
  * <p/>
  * A cache class that mixes memory cache and disk cache,
- * and intelligently cache things into memory or disk.
+ * and intelligently caches things into memory or disk,
+ * and even moves cache items from one to the other automatically.
+ * <p/>
+ * It also can be used as separate memory and disk caches.
+ *
+ * @author Richard Chien
  */
 public class FusionCache extends AbstractCache {
     private static final String LOG_TAG = "FusionCache";

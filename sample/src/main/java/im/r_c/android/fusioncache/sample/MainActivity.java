@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         diskCache.put("abcde", "abcde");
         diskCache.put("abcde", "abcdeajfgjgsfg");
         Log.d(TAG, "abcde: " + diskCache.getString("abcde"));
-        Log.d(TAG, "abc: " + Arrays.toString(diskCache.getBytes("abc")));
+        Log.d(TAG, "abcd: " + Arrays.toString(diskCache.getBytes("abcd")));
 
         try {
             diskCache.put("jsonObject", new JSONObject("{a: b, c: d}"));
