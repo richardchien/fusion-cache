@@ -21,51 +21,13 @@
 
 package im.r_c.android.fusioncache;
 
-import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.Serializable;
-
 /**
  * FusionCache
  * Created by richard on 6/13/16.
+ *
+ * Empty abstract cache class (may override some methods someday).
+ *
+ * @author Richard Chien
  */
-abstract class AbstractCache implements CacheInterface {
-    @Override
-    public String getString(String key) {
-        return Helper.getCache(this, key, String.class);
-    }
-
-    @Override
-    public JSONObject getJSONObject(String key) {
-        return Helper.getCache(this, key, JSONObject.class);
-    }
-
-    @Override
-    public JSONArray getJSONArray(String key) {
-        return Helper.getCache(this, key, JSONArray.class);
-    }
-
-    @Override
-    public byte[] getBytes(String key) {
-        return Helper.getCache(this, key, byte[].class);
-    }
-
-    @Override
-    public Bitmap getBitmap(String key) {
-        return Helper.getCache(this, key, Bitmap.class);
-    }
-
-    @Override
-    public Drawable getDrawable(String key) {
-        return Helper.getCache(this, key, Drawable.class);
-    }
-
-    @Override
-    public Serializable getSerializable(String key) {
-        return Helper.getCache(this, key, Serializable.class);
-    }
+abstract class AbstractCache implements Cache {
 }

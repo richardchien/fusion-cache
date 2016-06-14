@@ -19,7 +19,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package im.r_c.android.fusioncache;
+package im.r_c.android.fusioncache.util;
 
 import java.lang.reflect.Method;
 
@@ -28,6 +28,14 @@ import java.lang.reflect.Method;
  * Created by richard on 6/13/16.
  */
 public class ReflectUtils {
+    /**
+     * Invoke a method that matches the types of parameters, if exists.
+     * @param methodName Name of method.
+     * @param declared Whether to include methods that are not public.
+     * @param target Target to invoke the method.
+     * @param params Parameters to invoke the method.
+     * @return Result of the invocation.
+     */
     public static Object invokeMethodIfExists(String methodName, boolean declared, Object target, Object... params) {
         Class<?> c = target.getClass();
         Method[] methods;

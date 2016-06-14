@@ -30,10 +30,18 @@ import java.util.Map;
 /**
  * FusionCache
  * Created by richard on 6/13/16.
+ * <p/>
+ * A wrapper class of {@link ExtendedLruCache} which is a subclass
+ * of {@link LruCache}, providing a little more features than {@link LruCache}.
+ * <p/>
+ * This class <b>is not</b> thread-safe.
+ *
+ * @author Richard Chien
  */
 public class LruCacheWrapper<K, V> {
+
     /**
-     * Extended LRU cache which handles the main cache actions
+     * Extended LRU cache which handles the main cache actions.
      */
     private ExtendedLruCache mLruCache;
 
@@ -62,7 +70,7 @@ public class LruCacheWrapper<K, V> {
      * Caches {@code value} for {@code key}.
      * The value is moved to the head of the queue.
      *
-     * @param evictedEntryList A list used to store evicted entries
+     * @param evictedEntryList A list used to store evicted entries.
      * @return The previous value mapped by {@code key}.
      */
     public final V put(K key, V value, List<Entry<K, V>> evictedEntryList) {
@@ -131,7 +139,7 @@ public class LruCacheWrapper<K, V> {
      * Returns the size of the entry for {@code key} and {@code value} in user-defined units.
      * The default implementation returns 1 so that size
      * is the number of entries and max size is the maximum number of entries.
-     * <p>
+     * <p/>
      * An entry's size must not change while it is in the cache.
      */
     protected int sizeOf(K key, V value) {
@@ -139,32 +147,77 @@ public class LruCacheWrapper<K, V> {
     }
 
     /**
-     * Extended LRU cache that marks the recently evicted entries
+     * Called for entries that have been evicted or removed. This method is
+     * invoked when a value is evicted to make space, removed by a call to
+     * {@link #remove}, or replaced by a call to {@link #put}. The default
+     * implementation does nothing.
+     * <p/>
+     * The method is called without synchronization: other threads may
+     * access the cache while this method is executing.
+     *
+     * @param evicted  true if the entry is being removed to make space, false
+     *                 if the removal was caused by a {@link #put} or {@link #remove}.
+     * @param newValue the new value for {@code key}, if it exists. If non-null,
+     *                 this removal was caused by a {@link #put}. Otherwise it was caused by
+     *                 an eviction or a {@link #remove}.
+     */
+    protected void entryRemoved(boolean evicted, K key, V oldValue, V newValue) {
+    }
+
+    /**
+     * Extended LRU cache that marks the recently evicted entries.
      */
     private class ExtendedLruCache extends LruCache<K, V> {
+        /**
+         * List used to mark recently evicted entries.
+         */
         List<Entry<K, V>> mRecentlyEvictedEntryList = new ArrayList<>();
+
+        /**
+         * Indicate whether to mark recently evicted entries.
+         */
         boolean mMarkRecentlyEvicted = false;
 
         public ExtendedLruCache(int maxSize) {
             super(maxSize);
         }
 
+        /**
+         * Override to mark recently evicted entries,
+         * and call the wrapper method which may be override by subclass.
+         */
         @Override
         protected void entryRemoved(boolean evicted, K key, V oldValue, V newValue) {
             super.entryRemoved(evicted, key, oldValue, newValue);
             if (evicted && mMarkRecentlyEvicted) {
                 mRecentlyEvictedEntryList.add(new Entry<>(key, oldValue));
             }
+            LruCacheWrapper.this.entryRemoved(evicted, key, oldValue, newValue);
         }
 
+        /**
+         * Call the wrapper method which may be override by subclass.
+         */
         @Override
         protected int sizeOf(K key, V value) {
             return LruCacheWrapper.this.sizeOf(key, value);
         }
+
+        /**
+         * Change the super class's description of exception.
+         */
+        @Override
+        public void trimToSize(int maxSize) {
+            try {
+                super.trimToSize(maxSize);
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException("Cache object was modified without calling put() again.");
+            }
+        }
     }
 
     /**
-     * A wrapper of key and value
+     * A wrapper of key and value.
      */
     public static final class Entry<K, V> {
         K key;

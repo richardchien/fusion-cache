@@ -21,16 +21,50 @@
 
 package im.r_c.android.fusioncache;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.Serializable;
+
 /**
  * FusionCache
- * Created by richard on 6/13/16.
+ * Created by richard on 6/12/16.
  */
-class Helper {
-    static <T> T getCache(CacheInterface cache, String key, Class<T> clz) {
-        Object value = cache.get(key);
-        if (value == null || !clz.isInstance(value)) {
-            return null;
-        }
-        return clz.cast(value);
-    }
+interface Cache {
+    void put(String key, String value);
+
+    void put(String key, JSONObject value);
+
+    void put(String key, JSONArray value);
+
+    void put(String key, byte[] value);
+
+    void put(String key, Bitmap value);
+
+    void put(String key, Drawable value);
+
+    void put(String key, Serializable value);
+
+    String getString(String key);
+
+    JSONObject getJSONObject(String key);
+
+    JSONArray getJSONArray(String key);
+
+    byte[] getBytes(String key);
+
+    Bitmap getBitmap(String key);
+
+    Drawable getDrawable(String key);
+
+    Serializable getSerializable(String key);
+
+    Object remove(String key);
+
+    int size();
+
+    int maxSize();
 }

@@ -31,11 +31,24 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import im.r_c.android.fusioncache.util.MemoryUtils;
+
 /**
  * FusionCache
  * Created by richard on 6/12/16.
+ * <p/>
+ * A thread-safe class that provides memory cache functions.
+ *
+ * @author Richard Chien
  */
 public class MemCache extends AbstractCache {
+
+    /**
+     * A LruCache wrapper.
+     * <p/>
+     * Keeps strong references to objects so that
+     * the objects can be cached in memory.
+     */
     private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
 
     public MemCache(int maxCacheSize) {
@@ -49,67 +62,108 @@ public class MemCache extends AbstractCache {
 
     @Override
     public void put(String key, String value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, JSONObject value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, JSONArray value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, byte[] value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, Bitmap value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, Drawable value) {
-        putObject(key, value);
-    }
-
-    @Override
-    public void put(String key, Serializable value) {
-        putObject(key, value);
-    }
-
-    void putObject(String key, Object value) {
         put(key, value, null);
     }
 
     @Override
-    public Object get(String key) {
-        ValueWrapper wrapper =mCacheWrapper.get(key);
-        return wrapper == null ? null : wrapper.obj;
+    public void put(String key, JSONObject value) {
+        put(key, value, null);
     }
 
     @Override
-    public Object remove(String key) {
+    public void put(String key, JSONArray value) {
+        put(key, value, null);
+    }
+
+    @Override
+    public void put(String key, byte[] value) {
+        put(key, value, null);
+    }
+
+    @Override
+    public void put(String key, Bitmap value) {
+        put(key, value, null);
+    }
+
+    @Override
+    public void put(String key, Drawable value) {
+        put(key, value, null);
+    }
+
+    @Override
+    public void put(String key, Serializable value) {
+        put(key, value, null);
+    }
+
+    public Object get(String key) {
+        return get(key, Object.class);
+    }
+
+    @Override
+    public String getString(String key) {
+        return get(key, String.class);
+    }
+
+    @Override
+    public JSONObject getJSONObject(String key) {
+        return get(key, JSONObject.class);
+    }
+
+    @Override
+    public JSONArray getJSONArray(String key) {
+        return get(key, JSONArray.class);
+    }
+
+    @Override
+    public byte[] getBytes(String key) {
+        return get(key, byte[].class);
+    }
+
+    @Override
+    public Bitmap getBitmap(String key) {
+        return get(key, Bitmap.class);
+    }
+
+    @Override
+    public Drawable getDrawable(String key) {
+        return get(key, Drawable.class);
+    }
+
+    @Override
+    public Serializable getSerializable(String key) {
+        return get(key, Serializable.class);
+    }
+
+    @Override
+    public synchronized Object remove(String key) {
         return mCacheWrapper.remove(key);
     }
 
-    public int size() {
+    @Override
+    public synchronized int size() {
         return mCacheWrapper.size();
     }
 
-    public int maxSize() {
+    @Override
+    public synchronized int maxSize() {
         return mCacheWrapper.maxSize();
     }
 
-    Map<String, ValueWrapper> snapshot() {
+    synchronized Map<String, ValueWrapper> snapshot() {
         return mCacheWrapper.snapshot();
     }
 
-    Object put(String key, Object value, List<LruCacheWrapper.Entry<String, ValueWrapper>> evictedEntryList) {
+    /**
+     * Special put method, marking evicted entries.
+     * It's used by FusionCache to decide which cache items
+     * should be moved to disk cache.
+     * <p/>
+     * Only used in this package.
+     *
+     * @param evictedEntryList A list used to store evicted entries.
+     * @return The previous value mapped by {@code key}.
+     */
+    synchronized Object put(String key, Object value, List<LruCacheWrapper.Entry<String, ValueWrapper>> evictedEntryList) {
         int size = MemoryUtils.sizeOf(value);
         if (size <= maxSize()) {
             return mCacheWrapper.put(key, new ValueWrapper(value, size), evictedEntryList);
@@ -117,16 +171,40 @@ public class MemCache extends AbstractCache {
         return null;
     }
 
+    /**
+     * Special get method.
+     * Get value by class passed in.
+     * <p/>
+     * Only used in this class.
+     */
+    private synchronized <T> T get(String key, Class<T> clz) {
+        ValueWrapper wrapper = mCacheWrapper.get(key);
+        if (wrapper == null || !clz.isInstance(wrapper.obj)) {
+            return null;
+        }
+        return clz.cast(wrapper.obj);
+    }
+
+    /**
+     * A value wrapper for memory cache items,
+     * used to keep strong references to objects
+     * and sizes of objects.
+     */
     static class ValueWrapper {
         Object obj;
         int size;
 
-        public ValueWrapper() {
-        }
-
         public ValueWrapper(Object obj, int size) {
             this.obj = obj;
             this.size = size;
+        }
+
+        @Override
+        public String toString() {
+            return "ValueWrapper{" +
+                    "obj=" + obj +
+                    ", size=" + size +
+                    '}';
         }
     }
 }

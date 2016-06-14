@@ -19,7 +19,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package im.r_c.android.fusioncache;
+package im.r_c.android.fusioncache.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

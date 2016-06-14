@@ -36,6 +36,9 @@ import java.util.List;
 /**
  * FusionCache
  * Created by richard on 6/12/16.
+ * <p/>
+ * A cache class that mixes memory cache and disk cache,
+ * and intelligently cache things into memory or disk.
  */
 public class FusionCache extends AbstractCache {
     private static final String LOG_TAG = "FusionCache";
@@ -76,6 +79,14 @@ public class FusionCache extends AbstractCache {
         if (mMaxMemCacheSize > 0) {
             mMemCache = new MemCache(mMaxMemCacheSize);
         }
+    }
+
+    public MemCache getMemCache() {
+        return mMemCache;
+    }
+
+    public DiskCache getDiskCache() {
+        return mDiskCache;
     }
 
     @Override
@@ -135,13 +146,53 @@ public class FusionCache extends AbstractCache {
     }
 
     @Override
-    public Object get(String key) {
-        return mMemCache.get(key);
+    public String getString(String key) {
+        return null;
+    }
+
+    @Override
+    public JSONObject getJSONObject(String key) {
+        return null;
+    }
+
+    @Override
+    public JSONArray getJSONArray(String key) {
+        return null;
+    }
+
+    @Override
+    public byte[] getBytes(String key) {
+        return new byte[0];
+    }
+
+    @Override
+    public Bitmap getBitmap(String key) {
+        return null;
+    }
+
+    @Override
+    public Drawable getDrawable(String key) {
+        return null;
+    }
+
+    @Override
+    public Serializable getSerializable(String key) {
+        return null;
     }
 
     @Override
     public Object remove(String key) {
         return mMemCache.remove(key);
+    }
+
+    @Override
+    public int size() {
+        return memCacheSize() + diskCacheSize();
+    }
+
+    @Override
+    public int maxSize() {
+        return maxMemCacheSize() + maxDiskCacheSize();
     }
 
     public int memCacheSize() {
@@ -150,6 +201,14 @@ public class FusionCache extends AbstractCache {
 
     public int maxMemCacheSize() {
         return mMaxMemCacheSize;
+    }
+
+    public int diskCacheSize() {
+        return mDiskCache.size();
+    }
+
+    public int maxDiskCacheSize() {
+        return mDiskCache.maxSize();
     }
 
     private void checkFusionMode() {

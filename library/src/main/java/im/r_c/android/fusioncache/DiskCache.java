@@ -21,9 +21,363 @@
 
 package im.r_c.android.fusioncache;
 
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+
+import im.r_c.android.fusioncache.util.BitmapUtils;
+
 /**
  * FusionCache
  * Created by richard on 6/12/16.
+ * <p/>
+ * A thread-safe class that provides disk cache functions.
+ * <p/>
+ * Methods of this class may block while doing IO things.
+ *
+ * @author Richard Chien
  */
-public class DiskCache {
+public class DiskCache extends AbstractCache {
+
+    /**
+     * Pretend to store the key-value entry in a LRU cache.
+     * The actual objects are in the disk in fact.
+     * <p/>
+     * Keys in this cache wrapper are all hashed keys,
+     * same as the cache file name.
+     */
+    private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
+
+    /**
+     * The directory that stores cache files.
+     * <p/>
+     * Typically a sub directory inside the app's cache dir.
+     */
+    private File mCacheDir;
+
+    public DiskCache(File cacheDir, int maxCacheSize) {
+        if (cacheDir.exists() && cacheDir.isFile()) {
+            throw new IllegalArgumentException("cacheDir is not a directory.");
+        } else if (!cacheDir.exists()) {
+            if (!cacheDir.mkdirs()) {
+                // Failed to make dirs
+                throw new RuntimeException("Cannot create cache directory.");
+            }
+        }
+
+        mCacheDir = cacheDir;
+        mCacheWrapper = new LruCacheWrapper<String, ValueWrapper>(maxCacheSize) {
+            @Override
+            protected int sizeOf(String key, ValueWrapper valueWrapper) {
+                return valueWrapper.size;
+            }
+
+            @Override
+            protected void entryRemoved(boolean evicted, String hashKey/*cacheFileName*/, ValueWrapper oldValue, ValueWrapper newValue) {
+                if (evicted) {
+                    File file = new File(mCacheDir, hashKey);
+                    //noinspection ResultOfMethodCallIgnored
+                    file.delete();
+                }
+            }
+        };
+    }
+
+    @Override
+    public void put(String key, String value) {
+        put(key, value.getBytes());
+    }
+
+    @Override
+    public void put(String key, JSONObject value) {
+        put(key, value.toString());
+    }
+
+    @Override
+    public void put(String key, JSONArray value) {
+        put(key, value.toString());
+    }
+
+    /**
+     * The ultimate {@code put} method.
+     * <p/>
+     * Any other {@code put} methods will finally call this one
+     * to actually store byte array into the disk.
+     */
+    @Override
+    public void put(String key, byte[] value) {
+        int valueSize = value.length;
+        if (valueSize > maxSize()) {
+            // Value size is bigger than max cache size
+            return;
+        }
+
+        // Get the hash value of the key
+        // Never use the parameter "key" below
+        String hashKey = hashKeyForDisk(key);
+
+        File file = new File(mCacheDir, hashKey);
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            fos.write(value);
+            fos.flush();
+            mCacheWrapper.put(hashKey, new ValueWrapper(valueSize));
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    @Override
+    public void put(String key, Bitmap value) {
+        put(key, BitmapUtils.bitmapToBytes(value));
+    }
+
+    @Override
+    public void put(String key, Drawable value) {
+        put(key, BitmapUtils.drawableToBitmap(value));
+    }
+
+    @Override
+    public void put(String key, Serializable value) {
+        ByteArrayOutputStream baos = null;
+        ObjectOutputStream oos = null;
+        try {
+            baos = new ByteArrayOutputStream();
+            oos = new ObjectOutputStream(baos);
+            oos.writeObject(value);
+            byte[] byteArray = baos.toByteArray();
+            put(key, byteArray);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (baos != null) {
+                try {
+                    baos.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (oos != null) {
+                try {
+                    oos.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    @Override
+    public String getString(String key) {
+        return new String(getBytes(key));
+    }
+
+    @Override
+    public JSONObject getJSONObject(String key) {
+        JSONObject result = null;
+        try {
+            result = new JSONObject(getString(key));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    @Override
+    public JSONArray getJSONArray(String key) {
+        JSONArray result = null;
+        try {
+            result = new JSONArray(getString(key));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * The ultimate {@code get} method.
+     * <p/>
+     * Any other {@code get} methods will first call this one
+     * to get the primitive byte array and then convert to the type needed.
+     */
+    @Override
+    public byte[] getBytes(String key) {
+        // Get the hash value of the key
+        // Never use the parameter "key" below
+        String hashKey = hashKeyForDisk(key);
+
+        File file = new File(mCacheDir, hashKey);
+        if (!file.exists()) {
+            return null;
+        }
+
+        FileInputStream fis = null;
+        byte[] byteArray = new byte[(int) file.length()];
+        try {
+            fis = new FileInputStream(file);
+            if (fis.read(byteArray) < 0) {
+                // Didn't read anything actually
+                byteArray = null;
+            }
+            mCacheWrapper.get(hashKey);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+
+        return byteArray;
+    }
+
+    @Override
+    public Bitmap getBitmap(String key) {
+        return BitmapUtils.bytesToBitmap(getBytes(key));
+    }
+
+    @Override
+    @Deprecated
+    public Drawable getDrawable(String key) {
+        return BitmapUtils.bitmapToDrawable(getBitmap(key), null);
+    }
+
+    public Drawable getDrawable(String key, Resources res) {
+        return BitmapUtils.bitmapToDrawable(getBitmap(key), res);
+    }
+
+    @Override
+    public Serializable getSerializable(String key) {
+        byte[] byteArray = getBytes(key);
+        if (byteArray == null || byteArray.length == 0) {
+            return null;
+        }
+
+        ByteArrayInputStream bais = null;
+        ObjectInputStream ois = null;
+        Object result = null;
+        try {
+            bais = new ByteArrayInputStream(byteArray);
+            ois = new ObjectInputStream(bais);
+            result = ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        if (result == null || !(result instanceof Serializable)) {
+            return null;
+        } else {
+            return (Serializable) result;
+        }
+    }
+
+    /**
+     * Always returns null, because for disk cache,
+     * any action that gets a value must specify the type of the value.
+     */
+    @Override
+    public Object remove(String key) {
+        // Get the hash value of the key
+        // Never use the parameter "key" below
+        String hashKey = hashKeyForDisk(key);
+
+        File file = new File(mCacheDir, hashKey);
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
+
+        mCacheWrapper.remove(hashKey);
+        return null;
+    }
+
+    @Override
+    public int size() {
+        return mCacheWrapper.size();
+    }
+
+    @Override
+    public int maxSize() {
+        return mCacheWrapper.maxSize();
+    }
+
+    synchronized Map<String, ValueWrapper> snapshot() {
+        return mCacheWrapper.snapshot();
+    }
+
+    /**
+     * A hashing method that changes a string (like a URL) into a hash
+     * suitable for using as a disk filename.
+     */
+    public static String hashKeyForDisk(String key) {
+        String cacheKey;
+        try {
+            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
+            mDigest.update(key.getBytes());
+            cacheKey = bytesToHexString(mDigest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            cacheKey = String.valueOf(key.hashCode());
+        }
+        return cacheKey;
+    }
+
+    /**
+     * Convert bytes to hex string,
+     * working for {@link #hashKeyForDisk(java.lang.String)}
+     */
+    private static String bytesToHexString(byte[] bytes) {
+        // http://stackoverflow.com/questions/332079
+        StringBuilder sb = new StringBuilder();
+        for (byte aByte : bytes) {
+            String hex = Integer.toHexString(0xFF & aByte);
+            if (hex.length() == 1) {
+                sb.append('0');
+            }
+            sb.append(hex);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * A value wrapper for disk cache items,
+     * used to keep sizes of cache files.
+     */
+    static class ValueWrapper {
+        int size;
+
+        public ValueWrapper(int size) {
+            this.size = size;
+        }
+
+        @Override
+        public String toString() {
+            return "ValueWrapper{" +
+                    "size=" + size +
+                    '}';
+        }
+    }
 }
