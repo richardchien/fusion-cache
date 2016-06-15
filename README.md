@@ -41,6 +41,20 @@
 
 ## 用法
 
+添加 Gradle 依赖：
+
+```groovy
+allprojects {
+    repositories {
+        maven { url "https://jitpack.io" }
+    }
+}
+
+dependencies {
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta1'
+}
+```
+
 ### 使用 FusionCache
 
 ```java
