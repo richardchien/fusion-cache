@@ -24,7 +24,7 @@ package im.r_c.android.fusioncache;
 /**
  * FusionCache
  * Created by richard on 6/13/16.
- *
+ * <p/>
  * Empty abstract cache class (may override some methods someday).
  *
  * @author Richard Chien

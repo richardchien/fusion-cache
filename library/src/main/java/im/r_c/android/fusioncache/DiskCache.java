@@ -194,14 +194,22 @@ public class DiskCache extends AbstractCache {
 
     @Override
     public String getString(String key) {
-        return new String(getBytes(key));
+        byte[] byteArray = getBytes(key);
+        if (byteArray == null) {
+            return null;
+        }
+        return new String(byteArray);
     }
 
     @Override
     public JSONObject getJSONObject(String key) {
+        String jsonString = getString(key);
+        if (jsonString == null) {
+            return null;
+        }
         JSONObject result = null;
         try {
-            result = new JSONObject(getString(key));
+            result = new JSONObject(jsonString);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -210,9 +218,13 @@ public class DiskCache extends AbstractCache {
 
     @Override
     public JSONArray getJSONArray(String key) {
+        String jsonString = getString(key);
+        if (jsonString == null) {
+            return null;
+        }
         JSONArray result = null;
         try {
-            result = new JSONArray(getString(key));
+            result = new JSONArray(jsonString);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -267,8 +279,8 @@ public class DiskCache extends AbstractCache {
         return BitmapUtils.bytesToBitmap(getBytes(key));
     }
 
-    @Override
     @Deprecated
+    @Override
     public Drawable getDrawable(String key) {
         return BitmapUtils.bitmapToDrawable(getBitmap(key), null);
     }
@@ -335,6 +347,14 @@ public class DiskCache extends AbstractCache {
         saveJournal();
 
         return null;
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Override
+    public synchronized void clear() {
+        mCacheWrapper.evictAll();
+        getJournalFile().delete();
+        mCacheDir.delete();
     }
 
     @Override
@@ -424,7 +444,7 @@ public class DiskCache extends AbstractCache {
      * A hashing method that changes a string (like a URL) into a hash
      * suitable for using as a disk filename.
      */
-    public static String hashKeyForDisk(String key) {
+    private static String hashKeyForDisk(String key) {
         String cacheKey;
         try {
             final MessageDigest mDigest = MessageDigest.getInstance("MD5");

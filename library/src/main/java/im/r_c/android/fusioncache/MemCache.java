@@ -135,6 +135,11 @@ public class MemCache extends AbstractCache {
     }
 
     @Override
+    public synchronized void clear() {
+        mCacheWrapper.evictAll();
+    }
+
+    @Override
     public synchronized int size() {
         return mCacheWrapper.size();
     }
@@ -170,9 +175,9 @@ public class MemCache extends AbstractCache {
      * Special get method.
      * Get value by class passed in.
      * <p/>
-     * Only used in this class.
+     * Only used in this package.
      */
-    private synchronized <T> T get(String key, Class<T> clz) {
+    synchronized <T> T get(String key, Class<T> clz) {
         ValueWrapper wrapper = mCacheWrapper.get(key);
         if (wrapper == null || !clz.isInstance(wrapper.obj)) {
             return null;

@@ -118,6 +118,13 @@ class LruCacheWrapper<K, V> {
     }
 
     /**
+     * Clear the cache, calling {@link ExtendedLruCache#evictAll}.
+     */
+    public final void evictAll() {
+        mLruCache.evictAll();
+    }
+
+    /**
      * Returns the sum of the sizes of the entries in this cache.
      */
     public final int size() {

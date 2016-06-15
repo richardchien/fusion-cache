@@ -32,10 +32,11 @@ import java.lang.reflect.Method;
 public class ReflectUtils {
     /**
      * Invoke a method that matches the types of parameters, if exists.
+     *
      * @param methodName Name of method.
-     * @param declared Whether to include methods that are not public.
-     * @param target Target to invoke the method.
-     * @param params Parameters to invoke the method.
+     * @param declared   Whether to include methods that are not public.
+     * @param target     Target to invoke the method.
+     * @param params     Parameters to invoke the method.
      * @return Result of the invocation.
      */
     public static Object invokeMethodIfExists(String methodName, boolean declared, Object target, Object... params) {

@@ -29,9 +29,13 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import im.r_c.android.fusioncache.util.MemoryUtils;
 
 /**
  * FusionCache
@@ -42,20 +46,20 @@ import java.util.List;
  * and even moves cache items from one to the other automatically.
  * <p/>
  * It also can be used as separate memory and disk caches.
+ * <p/>
+ * This class is thread-safe.
  *
  * @author Richard Chien
  */
 public class FusionCache extends AbstractCache {
     private static final String LOG_TAG = "FusionCache";
+    private static final boolean DEBUG = false;
 
     private static final String DEFAULT_DISK_CACHE_DIR_NAME = "FusionCache";
 
     private Context mAppContext;
     private MemCache mMemCache;
     private DiskCache mDiskCache;
-    private int mMaxMemCacheSize;
-    private int mMaxDiskCacheSize;
-    private String mDiskCacheDirName;
     private boolean mFusionModeEnabled;
 
     public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize) {
@@ -76,146 +80,325 @@ public class FusionCache extends AbstractCache {
         }
 
         mAppContext = context.getApplicationContext();
-        mMaxMemCacheSize = maxMemCacheSize;
-        mMaxDiskCacheSize = maxDiskCacheSize;
-        mDiskCacheDirName = diskCacheDirName;
         mFusionModeEnabled = enableFusionMode;
 
-        if (mMaxMemCacheSize > 0) {
-            mMemCache = new MemCache(mMaxMemCacheSize);
+        if (maxMemCacheSize > 0) {
+            mMemCache = new MemCache(maxMemCacheSize);
+        }
+        if (maxDiskCacheSize > 0) {
+            mDiskCache = new DiskCache(new File(mAppContext.getCacheDir(), diskCacheDirName), maxDiskCacheSize);
         }
     }
 
+    /**
+     * Returns the {@link #mMemCache},
+     * or null if max memory cache size <= 0.
+     */
     public MemCache getMemCache() {
         return mMemCache;
     }
 
+    /**
+     * Returns the {@link #mDiskCache},
+     * or null if max disk cache size <= 0.
+     */
     public DiskCache getDiskCache() {
         return mDiskCache;
     }
 
     @Override
     public void put(String key, String value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, JSONObject value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, JSONArray value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, byte[] value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, Bitmap value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, Drawable value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public void put(String key, Serializable value) {
-        checkFusionMode();
-        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
-        mMemCache.put(key, value, evictedList);
-        Log.d(LOG_TAG, "evictedList: " + evictedList);
+        putInternal(key, value);
     }
 
     @Override
     public String getString(String key) {
-        return null;
+        return getInternal(key, String.class);
     }
 
     @Override
     public JSONObject getJSONObject(String key) {
-        return null;
+        return getInternal(key, JSONObject.class);
     }
 
     @Override
     public JSONArray getJSONArray(String key) {
-        return null;
+        return getInternal(key, JSONArray.class);
     }
 
     @Override
     public byte[] getBytes(String key) {
-        return new byte[0];
+        return getInternal(key, byte[].class);
     }
 
     @Override
     public Bitmap getBitmap(String key) {
-        return null;
+        return getInternal(key, Bitmap.class);
     }
 
     @Override
     public Drawable getDrawable(String key) {
-        return null;
+        return getInternal(key, Drawable.class);
     }
 
     @Override
     public Serializable getSerializable(String key) {
-        return null;
+        return getInternal(key, Serializable.class);
     }
 
     @Override
-    public Object remove(String key) {
-        return mMemCache.remove(key);
+    public synchronized Object remove(String key) {
+        Object result = null;
+        if (mMemCache != null) {
+            result = mMemCache.remove(key);
+        }
+        if (mDiskCache != null) {
+            mDiskCache.remove(key);
+        }
+        return result;
     }
 
     @Override
-    public int size() {
+    public synchronized void clear() {
+        if (mMemCache != null) {
+            mMemCache.clear();
+        }
+        if (mDiskCache != null) {
+            mDiskCache.clear();
+        }
+    }
+
+    @Override
+    public synchronized int size() {
         return memCacheSize() + diskCacheSize();
     }
 
     @Override
-    public int maxSize() {
+    public synchronized int maxSize() {
         return maxMemCacheSize() + maxDiskCacheSize();
     }
 
-    public int memCacheSize() {
-        return mMemCache.size();
+    /**
+     * Save all caches in {@link #mMemCache} into {@link #mDiskCache}.
+     * <p/>
+     * Won't change anything in {@link #mMemCache}.
+     */
+    public synchronized void saveMemCacheToDisk() {
+        if (mMemCache != null && mDiskCache != null) {
+            // We got both mMemCache and mDiskCache here
+            Map<String, MemCache.ValueWrapper> memCacheSnapshot = mMemCache.snapshot();
+            for (Map.Entry<String, MemCache.ValueWrapper> entry : memCacheSnapshot.entrySet()) {
+                putInDiskLocked(entry.getKey(), entry.getValue().obj);
+            }
+        }
     }
 
-    public int maxMemCacheSize() {
-        return mMaxMemCacheSize;
+    /**
+     * Returns the current used size of the {@link #mMemCache},
+     * or 0 if {@link #mMemCache} is null.
+     */
+    public synchronized int memCacheSize() {
+        if (mMemCache != null) {
+            return mMemCache.size();
+        }
+        return 0;
     }
 
-    public int diskCacheSize() {
-        return mDiskCache.size();
+    /**
+     * Returns the max size of memory cache,
+     * or 0 if {@link #mMemCache} is null.
+     */
+    public synchronized int maxMemCacheSize() {
+        if (mMemCache != null) {
+            return mMemCache.maxSize();
+        }
+        return 0;
     }
 
-    public int maxDiskCacheSize() {
-        return mDiskCache.maxSize();
+    /**
+     * Returns the current used size of the {@link #mDiskCache},
+     * or 0 if {@link #mDiskCache} is null.
+     */
+    public synchronized int diskCacheSize() {
+        if (mDiskCache != null) {
+            return mDiskCache.size();
+        }
+        return 0;
     }
 
+    /**
+     * Returns the max size of disk cache,
+     * or 0 if {@link #mDiskCache} is null.
+     */
+    public synchronized int maxDiskCacheSize() {
+        if (mDiskCache != null) {
+            return mDiskCache.maxSize();
+        }
+        return 0;
+    }
+
+    /**
+     * The internal {@code put} method,
+     * called by every public {@code put} method.
+     */
+    private void putInternal(String key, Object value) {
+        checkFusionMode();
+
+        synchronized (this) {
+            if (mMemCache != null && MemoryUtils.sizeOf(value) <= maxMemCacheSize()) {
+                List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = putInMemLocked(key, value);
+                if (mDiskCache != null) {
+                    for (LruCacheWrapper.Entry<String, MemCache.ValueWrapper> entry : evictedList) {
+                        putInDiskLocked(entry.key, entry.value.obj);
+                    }
+                }
+            } else if (mDiskCache != null) {
+                putInDiskLocked(key, value);
+            }
+        }
+    }
+
+    /**
+     * The internal {@code get} method,
+     * called by every public {@code get} method.
+     */
+    private <T> T getInternal(String key, Class<T> clz) {
+        checkFusionMode();
+
+        T result;
+
+        synchronized (this) {
+            if (mMemCache != null) {
+                result = getFromMemLocked(key, clz);
+                if (result != null) {
+                    // Got in memory cache
+                    return result;
+                }
+            }
+
+            if (mDiskCache != null) {
+                result = getFromDiskLocked(key, clz);
+                if (result != null) {
+                    // Got in disk cache
+                    if (mMemCache != null) {
+                        putInMemLocked(key, result);
+                    }
+                    return result;
+                }
+            }
+        }
+
+        // Got nothing
+        return null;
+    }
+
+    /**
+     * Put value into memory cache.
+     * <p/>
+     * Only called when {@link #mMemCache} is not null.
+     */
+    private List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> putInMemLocked(String key, Object value) {
+        // Already know mMemCache != null here
+        List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> evictedList = new ArrayList<>();
+        mMemCache.put(key, value, evictedList);
+        if (DEBUG) {
+            Log.d(LOG_TAG, "putInMemLocked: {" + key + ": " + value + "}, " + "evictedList: " + evictedList);
+        }
+        return evictedList;
+    }
+
+    /**
+     * Put value into disk cache.
+     * <p/>
+     * Only called when {@link #mDiskCache} is not null.
+     */
+    private void putInDiskLocked(String key, Object value) {
+        // Already know mDiskCache != null here
+        if (value instanceof String) {
+            mDiskCache.put(key, (String) value);
+        } else if (value instanceof JSONObject) {
+            mDiskCache.put(key, (JSONObject) value);
+        } else if (value instanceof JSONArray) {
+            mDiskCache.put(key, (JSONArray) value);
+        } else if (value instanceof byte[]) {
+            mDiskCache.put(key, (byte[]) value);
+        } else if (value instanceof Bitmap) {
+            mDiskCache.put(key, (Bitmap) value);
+        } else if (value instanceof Drawable) {
+            mDiskCache.put(key, (Drawable) value);
+        } else if (value instanceof Serializable) {
+            mDiskCache.put(key, (Serializable) value);
+        }
+    }
+
+    /**
+     * Get value from memory cache.
+     * <p/>
+     * Only called when {@link #mMemCache} is not null.
+     */
+    private <T> T getFromMemLocked(String key, Class<T> clz) {
+        // Already know mMemCache != null here
+        return mMemCache.get(key, clz);
+    }
+
+    /**
+     * Get value from disk cache.
+     * <p/>
+     * Only called when {@link #mDiskCache} is not null.
+     */
+    private <T> T getFromDiskLocked(String key, Class<T> clz) {
+        // Already know mDiskCache != null here
+        if (clz == String.class) {
+            return clz.cast(mDiskCache.getString(key));
+        } else if (clz == JSONObject.class) {
+            return clz.cast(mDiskCache.getJSONObject(key));
+        } else if (clz == JSONArray.class) {
+            return clz.cast(mDiskCache.getJSONArray(key));
+        } else if (clz == byte[].class) {
+            return clz.cast(mDiskCache.getBytes(key));
+        } else if (clz == Bitmap.class) {
+            return clz.cast(mDiskCache.getBitmap(key));
+        } else if (clz == Drawable.class) {
+            return clz.cast(mDiskCache.getDrawable(key, mAppContext.getResources()));
+        } else if (clz == Serializable.class) {
+            return clz.cast(mDiskCache.getSerializable(key));
+        }
+        return null;
+    }
+
+    /**
+     * Check if fusion mode is enabled
+     */
     private void checkFusionMode() {
         if (!mFusionModeEnabled) {
             // Fusion mode not enabled, so throw exception
