@@ -94,6 +94,95 @@ cache.getMemCache();
 cache.getDiskCache();
 ```
 
-如果 `FusionCache` 没有开启混合缓存模式，则必须通过这两个方法获取 `MemCache` 或 `DiskCache` 来使用，否则将会抛出异常。
+如果 `FusionCache` 没有开启混合缓存模式，则必须通过这两个方法获取 `MemCache` 或 `DiskCache` 来使用，比如 `cache.getMemCache().put("a", "abc")`，否则会抛出异常。
 
 <a name="en">
+
+This is a fusion cache library with mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
+
+The `FusionCache` class gives you a dynamic mixed cache. Also, you can just use `MemCache` or `DiskCache` separately, instead of `FusionCache`.
+
+## Mechanism / Principle
+
+### FusionCache
+
+The following is on the premise that the "fusion mode" is enabled (which can be set through constructor).
+
+From outside, `FusionCache` is just like `MemCache` and `DiskCache`, acting like a LRU cache -- the most recently accessed items are on the top of memory cache and the eldest items will be moved from memory to disk and then deleted. `FusionCache` implements it's functions by manipulating `MemCache` and `DiskCache` inside itself.
+
+Inserting an item:
+
+- Try to put it into memory cache. If memory cache is capable to store it, and some elder items are deleted from memory, then put these deleted ones into disk cache;
+- If the size of the item is bigger than the max size of memory cache (which means memory cache is not capable to store it), then put it into disk cache;
+- If the size of the item is bigger than the max size of disk cache, then don't cache it.
+
+Getting an item:
+
+- If the item is in memory cache, then get it directly;
+- If the item is in disk cache, then put it into memory cache extraly (without deleting the disk cache file);
+- If the item does not exist, then return `null`.
+
+Deleting an item: Any items that match the key will be deleted wherever they are stored (memory or disk).
+
+Clearing cache: All items in both memory and disk cache will be deleted, even the disk cache directory.
+
+### MemCache and DiskCache
+
+These two classes both use modified `LruCache` to achieve LRU cache. `MemCache` uses `LruCache` to maintain strong references of objects, and `DiskCache` uses `LruCache` to maintain names (key) and sizes of the cache files while the actual files are stored in the cache directory.
+
+## Usage
+
+Add dependency in `build.gradle`:
+
+```groovy
+allprojects {
+    repositories {
+        maven { url "https://jitpack.io" }
+    }
+}
+
+dependencies {
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta1'
+}
+```
+
+### Use FusionCache
+
+```java
+FusionCache cache = new FusionCache(
+        getApplicationContext(),
+        4 * 1024 * 1024, // The unit of cache size is byte
+        50 * 1024 * 1024, // For both memory and disk cache, max size should be less than Integer.MAX_VALUE
+        true // Enable fusion mode, default is true
+);
+
+cache.put("string", "This is a string.");
+cache.put("jsonObject", new JSONObject("{}"));
+cache.put("jsonArray", new JSONArray("[]"));
+cache.put("bytes", new byte[10]);
+cache.put("bitmap", Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888));
+cache.put("drawable", getDrawable(R.mipmap.ic_launcher));
+
+String string = cache.getString("string");
+JSONObject jsonObject = cache.getJSONObject("jsonObject");
+JSONArray jsonArray = cache.getJSONArray("jsonArray");
+byte[] bytes = cache.getBytes("bytes");
+Bitmap bitmap = cache.getBitmap("bitmap");
+Drawable drawable = cache.getDrawable("drawable");
+
+cache.saveMemCacheToDisk(); // Save all memory caches into disk cache, typically called while exiting the app
+
+cache.remove("bitmap");
+cache.clear();
+```
+
+### Use MemCache and DiskCache
+
+The APIs of these two classes are almost the same as `FusionCache`. Whatsmore, you can get the `MemCache` and `DiskCache` inside the `FusionCache` through the following two methods:
+
+```java
+cache.getMemCache();
+cache.getDiskCache();
+```
+
+If a `FusionCache`'s fusion mode is not enabled, you can't use it by directly calling it's methods like `put` and `get`, or an exception will be thrown. Instead, you must get it's inner memory or disk cache first, like `cache.getMemCache().put("a", "abc")`.
