@@ -21,102 +21,266 @@
 
 package im.r_c.android.fusioncache.sample;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 
-import java.io.Serializable;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import im.r_c.android.fusioncache.FusionCache;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+import im.r_c.android.commonrecyclerviewadapter.CommonRecyclerViewAdapter;
+import im.r_c.android.commonrecyclerviewadapter.ViewHolder;
+import im.r_c.android.fusioncache.sample.util.HttpUtils;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
+
+import static im.r_c.android.fusioncache.sample.util.HttpUtils.DEFAULT_CONNECTION_TIME_OUT;
+import static im.r_c.android.fusioncache.sample.util.HttpUtils.DEFAULT_READ_TIME_OUT;
+
+public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
     private static final String TAG = "MainActivity";
+
+    private SwipeRefreshLayout mSwipeRefreshLayout;
+    private RecyclerView mRecyclerView;
+    private LinearLayoutManager mLinearLayoutManager;
+    private Adapter mRecyclerViewAdapter;
+    private List<MovieEntity> mMovieEntities;
+    private String mUrl = "https://api.douban.com/v2/movie/top250";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        MemCache memCache = new MemCache(4 * 1024 * 1024);
-//        memCache.put("a", "sfjkadgfh");
-//        memCache.put("b", BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-//        Log.d(TAG, "" + memCache.get("b"));
-//        Log.d(TAG, "" + memCache.getString("a"));
-//        Log.d(TAG, "size: " + memCache.size());
-//        memCache.clear();
-//        memCache.put("a", "sdjafkgsakfgjkhkg");
-//        Log.d(TAG, "size: " + memCache.size());
-//
-//        File cacheDir = new File(getCacheDir(), "FusionCache");
-//        DiskCache diskCache = new DiskCache(cacheDir, 4 * 1024 * 1024);
-//        diskCache.put("abc", "abc");
-//        diskCache.put("abcd", "abcd");
-//        diskCache.put("abcde", "abcde");
-//        diskCache.put("abcde", "abcdeajfgjgsfg");
-//        Log.d(TAG, "abcde: " + diskCache.getString("abcde"));
-//        Log.d(TAG, "abcd: " + Arrays.toString(diskCache.getBytes("abcd")));
-//
-//        try {
-//            diskCache.put("jsonObject", new JSONObject("{a: b, c: d}"));
-//            diskCache.put("jsonArray", new JSONArray("[{a: b, c: d}, {e: f, g: h}]"));
-//            Log.d(TAG, "jsonArray: " + diskCache.getJSONArray("jsonArray"));
-//            Log.d(TAG, "jsonObject: " + diskCache.getJSONObject("jsonObject"));
-//        } catch (JSONException ignored) {
-//        }
-//
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
-//        diskCache.put("bitmap", bitmap);
-//        ImageView iv = (ImageView) findViewById(R.id.iv_image);
-//        assert iv != null;
-//        iv.setImageDrawable(diskCache.getDrawable("bitmap", getResources()));
-//
-//        Bean bean = new Bean(3);
-//        diskCache.put("bean", bean);
-//        Log.d(TAG, "bean: " + diskCache.getSerializable("bean"));
-//
-//        diskCache.clear();
-
-        FusionCache cache = new FusionCache(this, 30, 4 * 1024 * 1024);
-        cache.put("a", "abcd");
-        cache.put("b", "abcde");
-        Log.d(TAG, "a: " + cache.getString("a"));
-        cache.put("c", "abcdefgh");
-//        Log.d(TAG, "c in mem: " + cache.getMemCache().getString("c"));
-//        Log.d(TAG, "c in disk: " + cache.getDiskCache().getString("c"));
-        Log.d(TAG, "c: " + cache.getString("c"));
-        cache.put("d", "safhkhsf");
-//        Log.d(TAG, "c in mem: " + cache.getMemCache().getString("c"));
-//        Log.d(TAG, "c in disk: " + cache.getDiskCache().getString("c"));
-        Log.d(TAG, "c: " + cache.getString("c"));
-
-        cache.put("bean", new Bean(5));
-        Log.d(TAG, "bean: " + cache.getSerializable("bean"));
-
-        cache.put("string", "string");
-        Log.d(TAG, "string: " + cache.getString("string"));
-        cache.saveMemCacheToDisk();
-
-        cache.put("bitmap", bitmap);
-        Log.d(TAG, "bitmap: " + cache.getBitmap("bitmap"));
-
-        cache.remove("bitmap");
-        Log.d(TAG, "bitmap: " + cache.getBitmap("bitmap"));
-    }
-}
-
-class Bean implements Serializable {
-    int mInt = 2;
-
-    public Bean(int anInt) {
-        mInt = anInt;
+        init();
+        loadFromCache();
+        loadFromInternet();
     }
 
     @Override
-    public String toString() {
-        return "Bean{" +
-                "mInt=" + mInt +
-                '}';
+    protected void onDestroy() {
+        super.onDestroy();
+        App.getCache().saveMemCacheToDisk();
+    }
+
+    private void init() {
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.srl_swipe_refresh);
+        mRecyclerView = (RecyclerView) findViewById(R.id.rv_list);
+        assert mSwipeRefreshLayout != null;
+        assert mRecyclerView != null;
+
+        mSwipeRefreshLayout.setOnRefreshListener(this);
+        mMovieEntities = new ArrayList<>();
+        mRecyclerViewAdapter = new Adapter(this, mMovieEntities, R.layout.list_item);
+        mLinearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        mRecyclerView.setLayoutManager(mLinearLayoutManager);
+        mRecyclerView.setAdapter(mRecyclerViewAdapter);
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                mRecyclerView.setEnabled(mLinearLayoutManager.findFirstCompletelyVisibleItemPosition() == 0);
+            }
+        });
+    }
+
+    private void loadFromCache() {
+        Observable<JSONArray> observable = Observable.just(mUrl)
+                .map(new Func1<String, JSONArray>() {
+                    @Override
+                    public JSONArray call(String url) {
+                        JSONArray array = null;
+                        JSONObject object = App.getCache().getJSONObject(url);
+                        if (object != null) {
+                            try {
+                                array = object.getJSONArray("subjects");
+                            } catch (JSONException ignored) {
+                            }
+                        }
+                        return array;
+                    }
+                });
+        subscribeJSONArray(observable);
+    }
+
+    private void loadFromInternet() {
+        mSwipeRefreshLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                mSwipeRefreshLayout.setRefreshing(true);
+            }
+        });
+        Observable<JSONArray> observable = Observable.just(mUrl)
+                .map(new Func1<String, JSONArray>() {
+                    @Override
+                    public JSONArray call(String url) {
+                        // Get json array
+                        JSONArray jsonArray = null;
+                        String jsonString = HttpUtils.getSync(url);
+                        if (!"".equals(jsonString)) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(jsonString);
+                                App.getCache().getDiskCache().put(mUrl, jsonObject);
+                                jsonArray = jsonObject.getJSONArray("subjects");
+                            } catch (JSONException ignored) {
+                            }
+                        }
+                        Log.d(TAG, "Got json array: " + jsonArray);
+                        return jsonArray;
+                    }
+                });
+        subscribeJSONArray(observable);
+    }
+
+    private void subscribeJSONArray(Observable<JSONArray> observable) {
+        observable.flatMap(new Func1<JSONArray, Observable<JSONObject>>() {
+            @Override
+            public Observable<JSONObject> call(final JSONArray jsonArray) {
+                // Flatten the "subjects" array
+                return Observable.create(new Observable.OnSubscribe<JSONObject>() {
+                    @Override
+                    public void call(Subscriber<? super JSONObject> subscriber) {
+                        subscriber.onStart();
+                        if (jsonArray != null) {
+                            try {
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    subscriber.onNext(jsonArray.getJSONObject(i));
+                                    Log.d(TAG, "Got entity json object: " + jsonArray.getJSONObject(i));
+                                }
+                            } catch (JSONException ignored) {
+                            }
+                        }
+                        subscriber.onCompleted();
+                        Log.d(TAG, "flatMap completed");
+                    }
+                });
+            }
+        })
+                .map(new Func1<JSONObject, MovieEntity>() {
+                    @Override
+                    public MovieEntity call(JSONObject jsonObject) {
+                        // Make movie entities
+                        MovieEntity entity = null;
+                        try {
+                            entity = new MovieEntity();
+                            entity.setTitle(jsonObject.getString("title"));
+                            entity.setOriginalTitle(jsonObject.getString("original_title"));
+                            entity.setYear(jsonObject.getString("year"));
+                            entity.setImageUrl(jsonObject.getJSONObject("images").getString("medium"));
+                        } catch (JSONException ignored) {
+                        }
+                        Log.d(TAG, "Got movie entity: " + entity);
+                        return entity;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Subscriber<MovieEntity>() {
+                    private List<MovieEntity> list;
+
+                    @Override
+                    public void onStart() {
+                        super.onStart();
+                        list = new ArrayList<>();
+                    }
+
+                    @Override
+                    public void onNext(MovieEntity movieEntity) {
+                        list.add(movieEntity);
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        mMovieEntities.clear();
+                        mMovieEntities.addAll(list);
+                        mRecyclerViewAdapter.notifyDataSetChanged();
+                        mSwipeRefreshLayout.setRefreshing(false);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+                });
+    }
+
+    @Override
+    public void onRefresh() {
+        loadFromInternet();
+    }
+
+    private static class Adapter extends CommonRecyclerViewAdapter<MovieEntity> {
+
+        public Adapter(Context context, List<MovieEntity> dataList, int layoutId) {
+            super(context, dataList, layoutId);
+        }
+
+        @Override
+        public void onPostBindViewHolder(final ViewHolder viewHolder, MovieEntity movieEntity) {
+            viewHolder.setViewText(R.id.tv_title, movieEntity.getTitle())
+                    .setViewText(R.id.tv_original_title, movieEntity.getOriginalTitle())
+                    .setViewText(R.id.tv_year, movieEntity.getYear());
+
+            Observable.just(movieEntity.getImageUrl())
+                    .map(new Func1<String, Bitmap>() {
+                        @Override
+                        public Bitmap call(String urlString) {
+                            Bitmap bitmap = App.getCache().getBitmap(urlString);
+                            if (bitmap == null) {
+                                HttpURLConnection connection = null;
+                                try {
+                                    URL url = new URL(urlString);
+                                    connection = (HttpURLConnection) url.openConnection();
+                                    connection.setRequestMethod("GET");
+                                    connection.setConnectTimeout(DEFAULT_CONNECTION_TIME_OUT);
+                                    connection.setReadTimeout(DEFAULT_READ_TIME_OUT);
+                                    bitmap = BitmapFactory.decodeStream(connection.getInputStream());
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (connection != null) {
+                                        connection.disconnect();
+                                    }
+                                }
+
+                                if (bitmap != null) {
+                                    App.getCache().put(urlString, bitmap);
+                                }
+                            }
+                            return bitmap;
+                        }
+                    })
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Action1<Bitmap>() {
+                        @Override
+                        public void call(Bitmap bitmap) {
+                            if (bitmap != null) {
+                                viewHolder.setViewImageBitmap(R.id.iv_movie_logo, bitmap);
+                            }
+                        }
+                    });
+        }
     }
 }
