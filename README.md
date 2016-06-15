@@ -11,6 +11,8 @@
 
 动态混合缓存由 `FusionCache` 类实现，你也可以不用它，单独使用 `MemCache` 或 `DiskCache` 类来分别做内存和磁盘缓存。
 
+API 文档：[http://richardchien.github.io/fusion-cache-android/](http://richardchien.github.io/fusion-cache-android/)
+
 ## 动态机制／原理
 
 ### FusionCache
@@ -103,6 +105,8 @@ cache.getDiskCache();
 This is a fusion cache library with mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
 
 The `FusionCache` class gives you a dynamic mixed cache. Also, you can just use `MemCache` or `DiskCache` separately, instead of `FusionCache`.
+
+API docs: [http://richardchien.github.io/fusion-cache-android/](http://richardchien.github.io/fusion-cache-android/)
 
 ## Mechanism / Principle
 
