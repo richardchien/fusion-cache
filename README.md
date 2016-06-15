@@ -13,7 +13,7 @@
 
 ## 动态机制／原理
 
-### `FusionCache`
+### FusionCache
 
 以下内容是开启了混合模式（可在构造方法中通过 `enableFusionMode` 参数指定）的情况。
 
@@ -35,7 +35,7 @@
 
 清空缓存时，所有内存和磁盘缓存，以及磁盘缓存目录都会被删除。
 
-### `MemCache` 和 `DiskCache`
+### MemCache 和 DiskCache
 
 这两个类的内部都采用了经过一定修改的 `LruCache` 来实现 LRU 缓存。`MemCache` 直接由 `LruCache` 来维护对象的强引用，而 `DiskCache` 使用 `LruCache` 来维护缓存文件的文件名（键）和文件大小，具体文件存储在缓存目录下。
 
@@ -71,7 +71,7 @@ cache.remove("bitmap");
 cache.clear();
 ```
 
-### 使用 `MemCache` 和 `DiskCache`
+### 使用 MemCache 和 DiskCache
 
 这两个类的 API 基本和 `FusionCache` 相似。另外，对于 `FusionCache` 可以通过下面两个方法来分别获得其内部的 `MemCache` 和 `DiskCache`：
 
