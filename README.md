@@ -87,6 +87,8 @@ cache.remove("bitmap");
 cache.clear();
 ```
 
+**重要**：千万不要试图使用不相对应的 `put` 和 `get` 方法存取同一个键对应的的值，比如存入一个字符串却试图取出字节数组，这会导致不确定的结果或抛出运行时异常。并且，存入一个对象后，在其它地方改变了这个对象所占大小，却没有重新 `put` 进缓存的话，后续缓存操作可能会抛出异常，因此一旦一个缓存了的对象发生改变，应该重新调用 `put` 方法存入缓存。
+
 ### 使用 MemCache 和 DiskCache
 
 这两个类的 API 基本和 `FusionCache` 相似。另外，对于 `FusionCache` 可以通过下面两个方法来分别获得其内部的 `MemCache` 和 `DiskCache`：
@@ -181,6 +183,8 @@ cache.saveMemCacheToDisk(); // Save all memory caches into disk cache, typically
 cache.remove("bitmap");
 cache.clear();
 ```
+
+**Important**: NEVER use `put` and `get` methods that doesn't matches each other to save and fetch values, for example, put a String into cache but attempt to get it through `getBytes()`. This will result in an undetermine condition or throw a runtime exception. In addition, if an object is modified after put into cache, the `put` methods should be called again in order to handle potential size change of the object, otherwise, an exception may be thrown in later operations.
 
 ### Use MemCache and DiskCache
 
