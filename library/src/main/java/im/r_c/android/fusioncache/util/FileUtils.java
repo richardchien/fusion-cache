@@ -19,15 +19,33 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package im.r_c.android.fusioncache;
+package im.r_c.android.fusioncache.util;
+
+import java.io.File;
 
 /**
  * FusionCache
- * Created by richard on 6/13/16.
- * <p>
- * Empty abstract cache class (may override some methods someday).
+ * Created by richard on 6/15/16.
  *
  * @author Richard Chien
  */
-abstract class AbstractCache implements Cache {
+
+public class FileUtils {
+    /**
+     * Recursively delete a file or a directory.
+     *
+     * @param file File or directory to delete.
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static void deleteFile(File file) {
+        if (!file.isDirectory()) {
+            file.delete();
+            return;
+        }
+
+        // The file is a directory
+        for (File f : file.listFiles()) {
+            deleteFile(f);
+        }
+    }
 }

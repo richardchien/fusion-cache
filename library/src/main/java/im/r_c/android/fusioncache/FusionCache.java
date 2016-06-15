@@ -40,13 +40,13 @@ import im.r_c.android.fusioncache.util.MemoryUtils;
 /**
  * FusionCache
  * Created by richard on 6/12/16.
- * <p/>
+ * <p>
  * A cache class that mixes memory cache and disk cache,
  * and intelligently caches things into memory or disk,
  * and even moves cache items from one to the other automatically.
- * <p/>
+ * <p>
  * It also can be used as separate memory and disk caches.
- * <p/>
+ * <p>
  * This class is thread-safe.
  *
  * @author Richard Chien
@@ -92,7 +92,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Returns the {@link #mMemCache},
-     * or null if max memory cache size <= 0.
+     * or null if max memory cache size is non-positive.
      */
     public MemCache getMemCache() {
         return mMemCache;
@@ -100,7 +100,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Returns the {@link #mDiskCache},
-     * or null if max disk cache size <= 0.
+     * or null if max disk cache size is non-positive.
      */
     public DiskCache getDiskCache() {
         return mDiskCache;
@@ -210,7 +210,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Save all caches in {@link #mMemCache} into {@link #mDiskCache}.
-     * <p/>
+     * <p>
      * Won't change anything in {@link #mMemCache}.
      */
     public synchronized void saveMemCacheToDisk() {
@@ -324,7 +324,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Put value into memory cache.
-     * <p/>
+     * <p>
      * Only called when {@link #mMemCache} is not null.
      */
     private List<LruCacheWrapper.Entry<String, MemCache.ValueWrapper>> putInMemLocked(String key, Object value) {
@@ -339,7 +339,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Put value into disk cache.
-     * <p/>
+     * <p>
      * Only called when {@link #mDiskCache} is not null.
      */
     private void putInDiskLocked(String key, Object value) {
@@ -363,7 +363,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Get value from memory cache.
-     * <p/>
+     * <p>
      * Only called when {@link #mMemCache} is not null.
      */
     private <T> T getFromMemLocked(String key, Class<T> clz) {
@@ -373,7 +373,7 @@ public class FusionCache extends AbstractCache {
 
     /**
      * Get value from disk cache.
-     * <p/>
+     * <p>
      * Only called when {@link #mDiskCache} is not null.
      */
     private <T> T getFromDiskLocked(String key, Class<T> clz) {

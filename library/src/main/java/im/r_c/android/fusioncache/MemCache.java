@@ -36,7 +36,7 @@ import im.r_c.android.fusioncache.util.MemoryUtils;
 /**
  * FusionCache
  * Created by richard on 6/12/16.
- * <p/>
+ * <p>
  * A thread-safe class that provides memory cache functions.
  *
  * @author Richard Chien
@@ -45,7 +45,7 @@ public class MemCache extends AbstractCache {
 
     /**
      * A {@code LruCache} wrapper.
-     * <p/>
+     * <p>
      * Keeps strong references to objects so that
      * the objects can be cached in memory.
      */
@@ -157,7 +157,7 @@ public class MemCache extends AbstractCache {
      * Special put method, marking evicted entries.
      * It's used by FusionCache to decide which cache items
      * should be moved to disk cache.
-     * <p/>
+     * <p>
      * Only used in this package.
      *
      * @param evictedEntryList A list used to store evicted entries.
@@ -174,7 +174,7 @@ public class MemCache extends AbstractCache {
     /**
      * Special get method.
      * Get value by class passed in.
-     * <p/>
+     * <p>
      * Only used in this package.
      */
     synchronized <T> T get(String key, Class<T> clz) {

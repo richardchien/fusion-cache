@@ -21,6 +21,8 @@
 
 package im.r_c.android.fusioncache.sample;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -64,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
 //        } catch (JSONException ignored) {
 //        }
 //
-//        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
 //        diskCache.put("bitmap", bitmap);
 //        ImageView iv = (ImageView) findViewById(R.id.iv_image);
 //        assert iv != null;
@@ -76,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 //
 //        diskCache.clear();
 
-        FusionCache cache = new FusionCache(this, 30, 4 * 1024);
+        FusionCache cache = new FusionCache(this, 30, 4 * 1024 * 1024);
         cache.put("a", "abcd");
         cache.put("b", "abcde");
         Log.d(TAG, "a: " + cache.getString("a"));
@@ -95,6 +97,12 @@ public class MainActivity extends AppCompatActivity {
         cache.put("string", "string");
         Log.d(TAG, "string: " + cache.getString("string"));
         cache.saveMemCacheToDisk();
+
+        cache.put("bitmap", bitmap);
+        Log.d(TAG, "bitmap: " + cache.getBitmap("bitmap"));
+
+        cache.remove("bitmap");
+        Log.d(TAG, "bitmap: " + cache.getBitmap("bitmap"));
     }
 }
 

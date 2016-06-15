@@ -48,13 +48,14 @@ import java.util.List;
 import java.util.Map;
 
 import im.r_c.android.fusioncache.util.BitmapUtils;
+import im.r_c.android.fusioncache.util.FileUtils;
 
 /**
  * FusionCache
  * Created by richard on 6/12/16.
- * <p/>
+ * <p>
  * A thread-safe class that provides disk cache functions.
- * <p/>
+ * <p>
  * Methods of this class may block while doing IO things.
  *
  * @author Richard Chien
@@ -64,7 +65,7 @@ public class DiskCache extends AbstractCache {
     /**
      * Pretend to store the key-value entry in a LRU cache.
      * The actual objects are in the disk in fact.
-     * <p/>
+     * <p>
      * Keys in this cache wrapper are all hashed keys,
      * same as the cache file name.
      */
@@ -72,7 +73,7 @@ public class DiskCache extends AbstractCache {
 
     /**
      * The directory that stores cache files.
-     * <p/>
+     * <p>
      * Typically a sub directory inside the app's cache dir.
      */
     private File mCacheDir;
@@ -94,6 +95,8 @@ public class DiskCache extends AbstractCache {
         List<LruCacheWrapper.Entry<String, ValueWrapper>> entryList = restoreJournal();
         if (entryList != null && entryList.size() > 0) {
             for (LruCacheWrapper.Entry<String, ValueWrapper> entry : entryList) {
+                // Sizes of entries in the restore list are all fit current max cache size
+                // so just put it in
                 mCacheWrapper.put(entry.key, entry.value);
             }
         }
@@ -116,7 +119,7 @@ public class DiskCache extends AbstractCache {
 
     /**
      * The ultimate {@code put} method.
-     * <p/>
+     * <p>
      * Any other {@code put} methods will finally call this one
      * to actually store byte array into the disk.
      */
@@ -233,7 +236,7 @@ public class DiskCache extends AbstractCache {
 
     /**
      * The ultimate {@code get} method.
-     * <p/>
+     * <p>
      * Any other {@code get} methods will first call this one
      * to get the primitive byte array and then convert to the type needed.
      */
@@ -279,6 +282,9 @@ public class DiskCache extends AbstractCache {
         return BitmapUtils.bytesToBitmap(getBytes(key));
     }
 
+    /**
+     * @deprecated Use {@code getDrawable(String, Resources)} instead.
+     */
     @Deprecated
     @Override
     public Drawable getDrawable(String key) {
@@ -352,9 +358,7 @@ public class DiskCache extends AbstractCache {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override
     public synchronized void clear() {
-        mCacheWrapper.evictAll();
-        getJournalFile().delete();
-        mCacheDir.delete();
+        FileUtils.deleteFile(mCacheDir);
     }
 
     @Override
@@ -395,8 +399,12 @@ public class DiskCache extends AbstractCache {
 
     /**
      * Restore from journal file if exists.
-     * <p/>
+     * <p>
      * Typically called in constructor.
+     * <p>
+     * Note: Only restore caches that fit current max cache size,
+     * which means the ones whose sizes are bigger than current max size will be skipped,
+     * and the corresponding file will be deleted.
      *
      * @return List of entries.
      */
@@ -414,6 +422,12 @@ public class DiskCache extends AbstractCache {
             while ((hashKey = br.readLine()) != null) {
                 File cacheFile = new File(mCacheDir, hashKey);
                 if (!cacheFile.exists()) {
+                    continue;
+                } else if (cacheFile.length() > maxSize()) {
+                    // The cache file does not fit in the current cache
+                    // so delete it
+                    //noinspection ResultOfMethodCallIgnored
+                    cacheFile.delete();
                     continue;
                 }
                 list.add(new LruCacheWrapper.Entry<>(hashKey, new ValueWrapper((int) cacheFile.length())));

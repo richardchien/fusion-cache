@@ -30,11 +30,11 @@ import java.util.Map;
 /**
  * FusionCache
  * Created by richard on 6/13/16.
- * <p/>
+ * <p>
  * A wrapper class of {@link ExtendedLruCache} which is a subclass
- * of {@link LruCache}, providing a little more features than {@link LruCache}.
- * <p/>
- * This class <b>is not</b> thread-safe.
+ * of {@code LruCache}, providing a little more features than {@code LruCache}.
+ * <p>
+ * This class is <b>NOT</b> thread-safe.
  *
  * @author Richard Chien
  */
@@ -47,7 +47,7 @@ class LruCacheWrapper<K, V> {
 
     /**
      * Delegates some LruCache methods.
-     * <p/>
+     * <p>
      * Never be null.
      */
     private Delegate<K, V> mDelegate;
@@ -159,7 +159,7 @@ class LruCacheWrapper<K, V> {
     private static class ExtendedLruCache<K, V> extends LruCache<K, V> {
         /**
          * Delegates some {@code LruCache} methods.
-         * <p/>
+         * <p>
          * Never be null.
          */
         Delegate<K, V> mDelegate;
@@ -216,7 +216,7 @@ class LruCacheWrapper<K, V> {
     /**
      * Different cache class does different work at these methods,
      * so move them out.
-     * <p/>
+     * <p>
      * And avoid potential memory leak which may occur
      * if making {@link ExtendedLruCache} an inner class.
      */
