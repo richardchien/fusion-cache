@@ -48,6 +48,8 @@ import im.r_c.android.fusioncache.util.MemoryUtils;
  * It also can be used as separate memory and disk caches.
  * <p>
  * This class is thread-safe.
+ * <p>
+ * Methods of this class may block while doing IO things.
  *
  * @author Richard Chien
  */
