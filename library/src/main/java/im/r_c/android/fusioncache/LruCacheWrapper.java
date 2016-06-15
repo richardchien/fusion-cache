@@ -38,18 +38,29 @@ import java.util.Map;
  *
  * @author Richard Chien
  */
-public class LruCacheWrapper<K, V> {
+class LruCacheWrapper<K, V> {
 
     /**
      * Extended LRU cache which handles the main cache actions.
      */
-    private ExtendedLruCache mLruCache;
+    private ExtendedLruCache<K, V> mLruCache;
+
+    /**
+     * Delegates some LruCache methods.
+     * <p/>
+     * Never be null.
+     */
+    private Delegate<K, V> mDelegate;
 
     /**
      * @param maxSize The maximum sum of the sizes of the entries in this cache.
      */
-    public LruCacheWrapper(int maxSize) {
-        mLruCache = new ExtendedLruCache(maxSize);
+    public LruCacheWrapper(int maxSize, Delegate<K, V> delegate) {
+        if (delegate == null) {
+            throw new IllegalArgumentException("Delegate can't be null.");
+        }
+        mLruCache = new ExtendedLruCache<>(maxSize, delegate);
+        mDelegate = delegate;
     }
 
     /**
@@ -59,7 +70,7 @@ public class LruCacheWrapper<K, V> {
      * @return The previous value mapped by {@code key}.
      */
     public final V put(K key, V value) {
-        if (sizeOf(key, value) > maxSize()) {
+        if (mDelegate.sizeOf(key, value) > maxSize()) {
             throw new IllegalArgumentException("Object is bigger than max cache size.");
         }
         mLruCache.mMarkRecentlyEvicted = false;
@@ -74,7 +85,7 @@ public class LruCacheWrapper<K, V> {
      * @return The previous value mapped by {@code key}.
      */
     public final V put(K key, V value, List<Entry<K, V>> evictedEntryList) {
-        if (sizeOf(key, value) > maxSize()) {
+        if (mDelegate.sizeOf(key, value) > maxSize()) {
             throw new IllegalArgumentException("Object is bigger than max cache size.");
         }
         mLruCache.mRecentlyEvictedEntryList.clear();
@@ -107,21 +118,21 @@ public class LruCacheWrapper<K, V> {
     }
 
     /**
-     * @return The sum of the sizes of the entries in this cache.
+     * Returns the sum of the sizes of the entries in this cache.
      */
     public final int size() {
         return mLruCache.size();
     }
 
     /**
-     * @return The maximum sum of the sizes of the entries in this cache.
+     * Returns the maximum sum of the sizes of the entries in this cache.
      */
     public final int maxSize() {
         return mLruCache.maxSize();
     }
 
     /**
-     * @return A copy of the current contents of the cache, ordered from least
+     * Returns a copy of the current contents of the cache, ordered from least
      * recently accessed to most recently accessed.
      */
     public final Map<K, V> snapshot() {
@@ -136,38 +147,16 @@ public class LruCacheWrapper<K, V> {
     }
 
     /**
-     * Returns the size of the entry for {@code key} and {@code value} in user-defined units.
-     * The default implementation returns 1 so that size
-     * is the number of entries and max size is the maximum number of entries.
-     * <p/>
-     * An entry's size must not change while it is in the cache.
-     */
-    protected int sizeOf(K key, V value) {
-        return 1;
-    }
-
-    /**
-     * Called for entries that have been evicted or removed. This method is
-     * invoked when a value is evicted to make space, removed by a call to
-     * {@link #remove}, or replaced by a call to {@link #put}. The default
-     * implementation does nothing.
-     * <p/>
-     * The method is called without synchronization: other threads may
-     * access the cache while this method is executing.
-     *
-     * @param evicted  true if the entry is being removed to make space, false
-     *                 if the removal was caused by a {@link #put} or {@link #remove}.
-     * @param newValue the new value for {@code key}, if it exists. If non-null,
-     *                 this removal was caused by a {@link #put}. Otherwise it was caused by
-     *                 an eviction or a {@link #remove}.
-     */
-    protected void entryRemoved(boolean evicted, K key, V oldValue, V newValue) {
-    }
-
-    /**
      * Extended LRU cache that marks the recently evicted entries.
      */
-    private class ExtendedLruCache extends LruCache<K, V> {
+    private static class ExtendedLruCache<K, V> extends LruCache<K, V> {
+        /**
+         * Delegates some {@code LruCache} methods.
+         * <p/>
+         * Never be null.
+         */
+        Delegate<K, V> mDelegate;
+
         /**
          * List used to mark recently evicted entries.
          */
@@ -178,8 +167,9 @@ public class LruCacheWrapper<K, V> {
          */
         boolean mMarkRecentlyEvicted = false;
 
-        public ExtendedLruCache(int maxSize) {
+        public ExtendedLruCache(int maxSize, Delegate<K, V> delegate) {
             super(maxSize);
+            mDelegate = delegate;
         }
 
         /**
@@ -192,7 +182,7 @@ public class LruCacheWrapper<K, V> {
             if (evicted && mMarkRecentlyEvicted) {
                 mRecentlyEvictedEntryList.add(new Entry<>(key, oldValue));
             }
-            LruCacheWrapper.this.entryRemoved(evicted, key, oldValue, newValue);
+            mDelegate.entryRemoved(evicted, key, oldValue, newValue);
         }
 
         /**
@@ -200,7 +190,7 @@ public class LruCacheWrapper<K, V> {
          */
         @Override
         protected int sizeOf(K key, V value) {
-            return LruCacheWrapper.this.sizeOf(key, value);
+            return mDelegate.sizeOf(key, value);
         }
 
         /**
@@ -217,14 +207,24 @@ public class LruCacheWrapper<K, V> {
     }
 
     /**
+     * Different cache class does different work at these methods,
+     * so move them out.
+     * <p/>
+     * And avoid potential memory leak which may occur
+     * if making {@link ExtendedLruCache} an inner class.
+     */
+    public interface Delegate<K, V> {
+        int sizeOf(K key, V value);
+
+        void entryRemoved(boolean evicted, K key, V oldValue, V newValue);
+    }
+
+    /**
      * A wrapper of key and value.
      */
     public static final class Entry<K, V> {
         K key;
         V value;
-
-        public Entry() {
-        }
 
         public Entry(K key, V value) {
             this.key = key;

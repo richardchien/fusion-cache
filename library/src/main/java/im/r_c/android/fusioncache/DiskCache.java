@@ -88,21 +88,7 @@ public class DiskCache extends AbstractCache {
         }
 
         mCacheDir = cacheDir;
-        mCacheWrapper = new LruCacheWrapper<String, ValueWrapper>(maxCacheSize) {
-            @Override
-            protected int sizeOf(String key, ValueWrapper valueWrapper) {
-                return valueWrapper.size;
-            }
-
-            @Override
-            protected void entryRemoved(boolean evicted, String hashKey/*cacheFileName*/, ValueWrapper oldValue, ValueWrapper newValue) {
-                if (evicted) {
-                    File file = new File(mCacheDir, hashKey);
-                    //noinspection ResultOfMethodCallIgnored
-                    file.delete();
-                }
-            }
-        };
+        mCacheWrapper = new LruCacheWrapper<>(maxCacheSize, new LruCacheDelegate(mCacheDir));
 
         // Try to restore journal, aka the state of mCacheWrapper when last used
         List<LruCacheWrapper.Entry<String, ValueWrapper>> entryList = restoreJournal();
@@ -365,6 +351,9 @@ public class DiskCache extends AbstractCache {
         return mCacheWrapper.snapshot();
     }
 
+    /**
+     * Save snapshot to journal file.
+     */
     synchronized void saveJournal() {
         final Map<String, ValueWrapper> snapshot = snapshot();
         File file = getJournalFile();
@@ -384,6 +373,13 @@ public class DiskCache extends AbstractCache {
         }
     }
 
+    /**
+     * Restore from journal file if exists.
+     * <p/>
+     * Typically called in constructor.
+     *
+     * @return List of entries.
+     */
     synchronized List<LruCacheWrapper.Entry<String, ValueWrapper>> restoreJournal() {
         File journalFile = getJournalFile();
         if (!journalFile.exists()) {
@@ -416,8 +412,12 @@ public class DiskCache extends AbstractCache {
         return list;
     }
 
+    /**
+     * Returns a {@code File} object refers to the journal file.
+     */
     private File getJournalFile() {
-        return new File(mCacheDir, "journal");
+        //noinspection SpellCheckingInspection
+        return new File(mCacheDir, ".fusioncache.journal");
     }
 
     /**
@@ -469,6 +469,31 @@ public class DiskCache extends AbstractCache {
             return "ValueWrapper{" +
                     "size=" + size +
                     '}';
+        }
+    }
+
+    /**
+     * Implements some delegate methods of {@code LruCache}.
+     */
+    private static class LruCacheDelegate implements LruCacheWrapper.Delegate<String, ValueWrapper> {
+        private File mCacheDir;
+
+        public LruCacheDelegate(File cacheDir) {
+            mCacheDir = cacheDir;
+        }
+
+        @Override
+        public int sizeOf(String key, ValueWrapper valueWrapper) {
+            return valueWrapper.size;
+        }
+
+        @Override
+        public void entryRemoved(boolean evicted, String hashKey, ValueWrapper oldValue, ValueWrapper newValue) {
+            if (evicted) {
+                File file = new File(mCacheDir, hashKey);
+                //noinspection ResultOfMethodCallIgnored
+                file.delete();
+            }
         }
     }
 }

@@ -44,7 +44,7 @@ import im.r_c.android.fusioncache.util.MemoryUtils;
 public class MemCache extends AbstractCache {
 
     /**
-     * A LruCache wrapper.
+     * A {@code LruCache} wrapper.
      * <p/>
      * Keeps strong references to objects so that
      * the objects can be cached in memory.
@@ -52,12 +52,7 @@ public class MemCache extends AbstractCache {
     private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
 
     public MemCache(int maxCacheSize) {
-        mCacheWrapper = new LruCacheWrapper<String, ValueWrapper>(maxCacheSize) {
-            @Override
-            protected int sizeOf(String key, ValueWrapper valueWrapper) {
-                return valueWrapper.size;
-            }
-        };
+        mCacheWrapper = new LruCacheWrapper<>(maxCacheSize, new LruCacheDelegate());
     }
 
     @Override
@@ -205,6 +200,21 @@ public class MemCache extends AbstractCache {
                     "obj=" + obj +
                     ", size=" + size +
                     '}';
+        }
+    }
+
+    /**
+     * Implements some delegate methods of {@code LruCache}.
+     */
+    private static class LruCacheDelegate implements LruCacheWrapper.Delegate<String, ValueWrapper> {
+
+        @Override
+        public int sizeOf(String key, ValueWrapper valueWrapper) {
+            return valueWrapper.size;
+        }
+
+        @Override
+        public void entryRemoved(boolean evicted, String key, ValueWrapper oldValue, ValueWrapper newValue) {
         }
     }
 }
