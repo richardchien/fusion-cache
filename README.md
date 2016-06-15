@@ -96,6 +96,8 @@ cache.getDiskCache();
 
 如果 `FusionCache` 没有开启混合缓存模式，则必须通过这两个方法获取 `MemCache` 或 `DiskCache` 来使用，比如 `cache.getMemCache().put("a", "abc")`，否则会抛出异常。
 
+---------
+
 <a name="en">
 
 This is a fusion cache library with mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
