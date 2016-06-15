@@ -31,6 +31,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class FusionCache extends AbstractCache {
 
     private static final String DEFAULT_DISK_CACHE_DIR_NAME = "FusionCache";
 
-    private Context mAppContext;
+    private WeakReference<Context> mAppContextRef;
     private MemCache mMemCache;
     private DiskCache mDiskCache;
     private boolean mFusionModeEnabled;
@@ -81,14 +82,14 @@ public class FusionCache extends AbstractCache {
             throw new IllegalArgumentException("Max cache size should be non-negative.");
         }
 
-        mAppContext = context.getApplicationContext();
+        mAppContextRef = new WeakReference<>(context.getApplicationContext());
         mFusionModeEnabled = enableFusionMode;
 
         if (maxMemCacheSize > 0) {
             mMemCache = new MemCache(maxMemCacheSize);
         }
         if (maxDiskCacheSize > 0) {
-            mDiskCache = new DiskCache(new File(mAppContext.getCacheDir(), diskCacheDirName), maxDiskCacheSize);
+            mDiskCache = new DiskCache(new File(context.getCacheDir(), diskCacheDirName), maxDiskCacheSize);
         }
     }
 
@@ -391,7 +392,12 @@ public class FusionCache extends AbstractCache {
         } else if (clz == Bitmap.class) {
             return clz.cast(mDiskCache.getBitmap(key));
         } else if (clz == Drawable.class) {
-            return clz.cast(mDiskCache.getDrawable(key, mAppContext.getResources()));
+            Context context = mAppContextRef.get();
+            if (context != null) {
+                return clz.cast(mDiskCache.getDrawable(key, context.getResources()));
+            } else {
+                return clz.cast(mDiskCache.getDrawable(key));
+            }
         } else if (clz == Serializable.class) {
             return clz.cast(mDiskCache.getSerializable(key));
         }
