@@ -53,7 +53,7 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta1'
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta2'
 }
 ```
 
@@ -63,7 +63,7 @@ dependencies {
 FusionCache cache = new FusionCache(
         getApplicationContext(),
         4 * 1024 * 1024, // 缓存容量的单位是字节
-        50 * 1024 * 1024, // 无论内存还是磁盘缓存, 容量都必须小于 Integer.MAX_VALUE
+        50 * 1024 * 1024,
         true // 开启混合缓存模式，默认为 true
 );
 
@@ -150,7 +150,7 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta1'
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta2'
 }
 ```
 
@@ -160,7 +160,7 @@ dependencies {
 FusionCache cache = new FusionCache(
         getApplicationContext(),
         4 * 1024 * 1024, // The unit of cache size is byte
-        50 * 1024 * 1024, // For both memory and disk cache, max size should be less than Integer.MAX_VALUE
+        50 * 1024 * 1024,
         true // Enable fusion mode, default is true
 );
 
