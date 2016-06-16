@@ -1,6 +1,6 @@
 # FusionCache for Android
 
-[![License](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
+[![License](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/richardchien/fusion-cache-android/blob/master/LICENSE)
 [![Release](https://jitpack.io/v/richardchien/fusion-cache-android.svg)](https://jitpack.io/#richardchien/fusion-cache-android)
 
 [中文](#zh) [English](#en)
