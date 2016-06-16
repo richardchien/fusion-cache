@@ -78,7 +78,7 @@ public class DiskCache extends AbstractCache {
      */
     private File mCacheDir;
 
-    public DiskCache(File cacheDir, int maxCacheSize) {
+    public DiskCache(File cacheDir, long maxCacheSize) {
         if (cacheDir.exists() && cacheDir.isFile()) {
             throw new IllegalArgumentException("cacheDir is not a directory.");
         } else if (!cacheDir.exists()) {
@@ -362,12 +362,12 @@ public class DiskCache extends AbstractCache {
     }
 
     @Override
-    public synchronized int size() {
+    public synchronized long size() {
         return mCacheWrapper.size();
     }
 
     @Override
-    public synchronized int maxSize() {
+    public synchronized long maxSize() {
         return mCacheWrapper.maxSize();
     }
 

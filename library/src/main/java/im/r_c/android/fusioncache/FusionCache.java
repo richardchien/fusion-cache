@@ -65,19 +65,19 @@ public class FusionCache extends AbstractCache {
     private DiskCache mDiskCache;
     private boolean mFusionModeEnabled;
 
-    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize) {
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize) {
         this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, true);
     }
 
-    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, boolean enableFusionMode) {
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, boolean enableFusionMode) {
         this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, enableFusionMode);
     }
 
-    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, String diskCacheSizeName) {
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, String diskCacheSizeName) {
         this(context, maxMemCacheSize, maxDiskCacheSize, diskCacheSizeName, true);
     }
 
-    public FusionCache(Context context, int maxMemCacheSize, int maxDiskCacheSize, String diskCacheDirName, boolean enableFusionMode) {
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, String diskCacheDirName, boolean enableFusionMode) {
         if (maxMemCacheSize < 0 || maxDiskCacheSize < 0) {
             throw new IllegalArgumentException("Max cache size should be non-negative.");
         }
@@ -186,6 +186,8 @@ public class FusionCache extends AbstractCache {
             result = mMemCache.remove(key);
         }
         if (mDiskCache != null) {
+            // DiskCache's remove method always returns null,
+            // so it's meaningless, won't take it
             mDiskCache.remove(key);
         }
         return result;
@@ -202,12 +204,12 @@ public class FusionCache extends AbstractCache {
     }
 
     @Override
-    public synchronized int size() {
+    public synchronized long size() {
         return memCacheSize() + diskCacheSize();
     }
 
     @Override
-    public synchronized int maxSize() {
+    public synchronized long maxSize() {
         return maxMemCacheSize() + maxDiskCacheSize();
     }
 
@@ -230,7 +232,7 @@ public class FusionCache extends AbstractCache {
      * Returns the current used size of the {@link #mMemCache},
      * or 0 if {@link #mMemCache} is null.
      */
-    public synchronized int memCacheSize() {
+    public synchronized long memCacheSize() {
         if (mMemCache != null) {
             return mMemCache.size();
         }
@@ -241,7 +243,7 @@ public class FusionCache extends AbstractCache {
      * Returns the max size of memory cache,
      * or 0 if {@link #mMemCache} is null.
      */
-    public synchronized int maxMemCacheSize() {
+    public synchronized long maxMemCacheSize() {
         if (mMemCache != null) {
             return mMemCache.maxSize();
         }
@@ -252,7 +254,7 @@ public class FusionCache extends AbstractCache {
      * Returns the current used size of the {@link #mDiskCache},
      * or 0 if {@link #mDiskCache} is null.
      */
-    public synchronized int diskCacheSize() {
+    public synchronized long diskCacheSize() {
         if (mDiskCache != null) {
             return mDiskCache.size();
         }
@@ -263,7 +265,7 @@ public class FusionCache extends AbstractCache {
      * Returns the max size of disk cache,
      * or 0 if {@link #mDiskCache} is null.
      */
-    public synchronized int maxDiskCacheSize() {
+    public synchronized long maxDiskCacheSize() {
         if (mDiskCache != null) {
             return mDiskCache.maxSize();
         }

@@ -51,7 +51,7 @@ public class MemCache extends AbstractCache {
      */
     private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
 
-    public MemCache(int maxCacheSize) {
+    public MemCache(long maxCacheSize) {
         mCacheWrapper = new LruCacheWrapper<>(maxCacheSize, new LruCacheDelegate());
     }
 
@@ -140,12 +140,12 @@ public class MemCache extends AbstractCache {
     }
 
     @Override
-    public synchronized int size() {
+    public synchronized long size() {
         return mCacheWrapper.size();
     }
 
     @Override
-    public synchronized int maxSize() {
+    public synchronized long maxSize() {
         return mCacheWrapper.maxSize();
     }
 

@@ -70,7 +70,7 @@ interface Cache {
 
     void clear();
 
-    int size();
+    long size();
 
-    int maxSize();
+    long maxSize();
 }

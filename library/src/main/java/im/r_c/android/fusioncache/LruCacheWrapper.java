@@ -21,8 +21,6 @@
 
 package im.r_c.android.fusioncache;
 
-import android.util.LruCache;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +53,7 @@ class LruCacheWrapper<K, V> {
     /**
      * @param maxSize The maximum sum of the sizes of the entries in this cache.
      */
-    public LruCacheWrapper(int maxSize, Delegate<K, V> delegate) {
+    public LruCacheWrapper(long maxSize, Delegate<K, V> delegate) {
         if (delegate == null) {
             throw new IllegalArgumentException("Delegate can't be null.");
         }
@@ -127,14 +125,14 @@ class LruCacheWrapper<K, V> {
     /**
      * Returns the sum of the sizes of the entries in this cache.
      */
-    public final int size() {
+    public final long size() {
         return mLruCache.size();
     }
 
     /**
      * Returns the maximum sum of the sizes of the entries in this cache.
      */
-    public final int maxSize() {
+    public final long maxSize() {
         return mLruCache.maxSize();
     }
 
@@ -174,7 +172,7 @@ class LruCacheWrapper<K, V> {
          */
         boolean mMarkRecentlyEvicted = false;
 
-        public ExtendedLruCache(int maxSize, Delegate<K, V> delegate) {
+        public ExtendedLruCache(long maxSize, Delegate<K, V> delegate) {
             super(maxSize);
             mDelegate = delegate;
         }
@@ -204,7 +202,7 @@ class LruCacheWrapper<K, V> {
          * Change the super class's description of exception.
          */
         @Override
-        public void trimToSize(int maxSize) {
+        public void trimToSize(long maxSize) {
             try {
                 super.trimToSize(maxSize);
             } catch (IllegalStateException e) {
