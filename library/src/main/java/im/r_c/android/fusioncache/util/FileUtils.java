@@ -52,10 +52,20 @@ public class FileUtils {
         }
     }
 
+    /**
+     * Get the system's default cache directory.
+     *
+     * Note: Only when the SD card is mounted and it's not removable
+     * will this method returns the external cache dir in /sdcard/Android/data,
+     * otherwise it returns the inner cache dir in /data/data.
+     *
+     * @param cacheDirName Name of subdirectory in the root cache dir.
+     * @return The file object refers to the needed cache dir.
+     */
     public static File getDiskCacheDir(Context context, String cacheDirName) {
         File rootCacheDir;
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())
-                || !Environment.isExternalStorageRemovable()) {
+                && !Environment.isExternalStorageRemovable()) {
             rootCacheDir = context.getExternalCacheDir();
         } else {
             rootCacheDir = context.getCacheDir();
