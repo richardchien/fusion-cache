@@ -248,6 +248,7 @@ public class DiskCache extends AbstractCache {
 
         File file = new File(mCacheDir, hashKey);
         if (!file.exists()) {
+            remove(key); // Cache file missed, so remove it
             return null;
         }
 

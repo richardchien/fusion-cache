@@ -21,6 +21,9 @@
 
 package im.r_c.android.fusioncache.util;
 
+import android.content.Context;
+import android.os.Environment;
+
 import java.io.File;
 
 /**
@@ -47,5 +50,16 @@ public class FileUtils {
         for (File f : file.listFiles()) {
             deleteFile(f);
         }
+    }
+
+    public static File getDiskCacheDir(Context context, String cacheDirName) {
+        File rootCacheDir;
+        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())
+                || !Environment.isExternalStorageRemovable()) {
+            rootCacheDir = context.getExternalCacheDir();
+        } else {
+            rootCacheDir = context.getCacheDir();
+        }
+        return new File(rootCacheDir, cacheDirName);
     }
 }

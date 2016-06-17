@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import im.r_c.android.fusioncache.util.FileUtils;
 import im.r_c.android.fusioncache.util.MemoryUtils;
 
 /**
@@ -66,18 +67,33 @@ public class FusionCache extends AbstractCache {
     private boolean mFusionModeEnabled;
 
     public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize) {
-        this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, true);
+        // Set enableFusionMode to default value true
+        this(context, maxMemCacheSize, maxDiskCacheSize, true);
     }
 
     public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, boolean enableFusionMode) {
+        // Set diskCacheDirName to default value DEFAULT_DISK_CACHE_DIR_NAME
         this(context, maxMemCacheSize, maxDiskCacheSize, DEFAULT_DISK_CACHE_DIR_NAME, enableFusionMode);
     }
 
-    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, String diskCacheSizeName) {
-        this(context, maxMemCacheSize, maxDiskCacheSize, diskCacheSizeName, true);
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, String diskCacheDirName) {
+        // Set enableFusionMode to default value true
+        this(context, maxMemCacheSize, maxDiskCacheSize, diskCacheDirName, true);
     }
 
     public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, String diskCacheDirName, boolean enableFusionMode) {
+        // Set diskCacheDir to system's default cache dir
+        this(context, maxMemCacheSize, maxDiskCacheSize, FileUtils.getDiskCacheDir(context, diskCacheDirName), enableFusionMode);
+    }
+
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, File diskCacheDir) {
+        // Set enableFusionMode to default value true
+        this(context, maxMemCacheSize, maxDiskCacheSize, diskCacheDir, true);
+    }
+
+    public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize, File diskCacheDir, boolean enableFusionMode) {
+        // Do the real initialization
+
         if (maxMemCacheSize < 0 || maxDiskCacheSize < 0) {
             throw new IllegalArgumentException("Max cache size should be non-negative.");
         }
@@ -89,7 +105,7 @@ public class FusionCache extends AbstractCache {
             mMemCache = new MemCache(maxMemCacheSize);
         }
         if (maxDiskCacheSize > 0) {
-            mDiskCache = new DiskCache(new File(context.getCacheDir(), diskCacheDirName), maxDiskCacheSize);
+            mDiskCache = new DiskCache(diskCacheDir, maxDiskCacheSize);
         }
     }
 
