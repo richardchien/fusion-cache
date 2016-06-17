@@ -29,30 +29,29 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import im.r_c.android.fusioncache.util.BitmapUtils;
 import im.r_c.android.fusioncache.util.FileUtils;
 
 /**
  * FusionCache
- * Created by richard on 6/12/16.
+ * Created by richard on 6/17/16.
+ * <p>
+ * This is a modified version of {@link DiskCache},
+ * using {@code DiskLruCache} instead of manipulating cache files
+ * manually.
  * <p>
  * A thread-safe class that provides disk cache functions.
  * <p>
@@ -60,16 +59,7 @@ import im.r_c.android.fusioncache.util.FileUtils;
  *
  * @author Richard Chien
  */
-public class DiskCache extends AbstractCache {
-
-    /**
-     * Pretend to store the key-value entry in a LRU cache.
-     * The actual objects are in the disk in fact.
-     * <p>
-     * Keys in this cache wrapper are all hashed keys,
-     * same as the cache file name.
-     */
-    private LruCacheWrapper<String, ValueWrapper> mCacheWrapper;
+public class DiskCache2 extends AbstractCache {
 
     /**
      * The directory that stores cache files.
@@ -78,28 +68,20 @@ public class DiskCache extends AbstractCache {
      */
     private File mCacheDir;
 
-    public DiskCache(File cacheDir, long maxCacheSize) {
+    private DiskLruCache mDiskLruCache;
+
+    public DiskCache2(File cacheDir, long maxCacheSize) {
         if (cacheDir.exists() && cacheDir.isFile()) {
             throw new IllegalArgumentException("cacheDir is not a directory.");
-        } else if (!cacheDir.exists()) {
-            if (!cacheDir.mkdirs()) {
-                // Failed to make dirs
-                throw new RuntimeException("Cannot create cache directory.");
-            }
+        }
+
+        try {
+            mDiskLruCache = DiskLruCache.open(cacheDir, 1, 1, maxCacheSize);
+        } catch (IOException e) {
+            throw new RuntimeException("Open DiskLruCache failed.");
         }
 
         mCacheDir = cacheDir;
-        mCacheWrapper = new LruCacheWrapper<>(maxCacheSize, new LruCacheDelegate(mCacheDir));
-
-        // Try to restore journal, aka the state of mCacheWrapper when last used
-        List<LruCacheWrapper.Entry<String, ValueWrapper>> entryList = restoreJournal();
-        if (entryList != null && entryList.size() > 0) {
-            for (LruCacheWrapper.Entry<String, ValueWrapper> entry : entryList) {
-                // Sizes of entries in the restore list are all fit current max cache size
-                // so just put it in
-                mCacheWrapper.put(entry.key, entry.value);
-            }
-        }
     }
 
     @Override
@@ -135,22 +117,27 @@ public class DiskCache extends AbstractCache {
         // Never use the parameter "key" below
         String hashKey = hashKeyForDisk(key);
 
-        File file = getCacheFile(mCacheDir, hashKey);
-        FileOutputStream fos = null;
+        DiskLruCache.Editor editor = null;
+        OutputStream out = null;
         try {
-            fos = new FileOutputStream(file);
-            fos.write(value);
-            fos.flush();
-            mCacheWrapper.put(hashKey, new ValueWrapper(valueSize));
-
-            // Save journal file
-            saveJournal();
-        } catch (java.io.IOException e) {
+            editor = mDiskLruCache.edit(hashKey);
+            out = editor.newOutputStream(0);
+            out.write(value);
+            out.flush();
+            editor.commit();
+            mDiskLruCache.flush();
+        } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (fos != null) {
+            if (editor != null) {
                 try {
-                    fos.close();
+                    editor.abort();
+                } catch (IOException ignored) {
+                }
+            }
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
                 } catch (IOException ignored) {
                 }
             }
@@ -246,32 +233,31 @@ public class DiskCache extends AbstractCache {
         // Never use the parameter "key" below
         String hashKey = hashKeyForDisk(key);
 
-        File file = getCacheFile(mCacheDir, hashKey);
-        if (!file.exists()) {
-            remove(key); // Cache file missed, so remove it
-            return null;
-        }
-
-        FileInputStream fis = null;
-        byte[] byteArray = new byte[(int) file.length()];
+        DiskLruCache.Snapshot snapshot = null;
+        InputStream in = null;
+        byte[] byteArray = null;
         try {
-            fis = new FileInputStream(file);
-            if (fis.read(byteArray) < 0) {
-                // Didn't read anything actually
-                byteArray = null;
+            snapshot = mDiskLruCache.get(hashKey);
+            if (snapshot != null) {
+                in = snapshot.getInputStream(0);
+                byteArray = new byte[(int) FileUtils.getFileSize((FileInputStream) in)];
+                if (in.read(byteArray) < 0) {
+                    // Didn't read anything actually
+                    byteArray = null;
+                }
+                mDiskLruCache.flush();
             }
-            mCacheWrapper.get(hashKey);
-
-            // Save journal file
-            saveJournal();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            if (fis != null) {
+            if (in != null) {
                 try {
-                    fis.close();
+                    in.close();
                 } catch (IOException ignored) {
                 }
+            }
+            if (snapshot != null) {
+                snapshot.close();
             }
         }
 
@@ -344,14 +330,12 @@ public class DiskCache extends AbstractCache {
         // Never use the parameter "key" below
         String hashKey = hashKeyForDisk(key);
 
-        File file = getCacheFile(mCacheDir, hashKey);
-        //noinspection ResultOfMethodCallIgnored
-        file.delete();
-
-        mCacheWrapper.remove(hashKey);
-
-        // Save journal file
-        saveJournal();
+        try {
+            mDiskLruCache.remove(hashKey);
+            mDiskLruCache.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         return null;
     }
@@ -364,100 +348,12 @@ public class DiskCache extends AbstractCache {
 
     @Override
     public synchronized long size() {
-        return mCacheWrapper.size();
+        return mDiskLruCache.size();
     }
 
     @Override
     public synchronized long maxSize() {
-        return mCacheWrapper.maxSize();
-    }
-
-    synchronized Map<String, ValueWrapper> snapshot() {
-        return mCacheWrapper.snapshot();
-    }
-
-    /**
-     * Save snapshot to journal file.
-     */
-    synchronized void saveJournal() {
-        final Map<String, ValueWrapper> snapshot = snapshot();
-        File file = getJournalFile();
-        PrintWriter pw = null;
-        try {
-            pw = new PrintWriter(file);
-            for (String hashKey : snapshot.keySet()) {
-                pw.println(hashKey);
-            }
-            pw.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (pw != null) {
-                pw.close();
-            }
-        }
-    }
-
-    /**
-     * Restore from journal file if exists.
-     * <p>
-     * Typically called in constructor.
-     * <p>
-     * Note: Only restore caches that fit current max cache size,
-     * which means the ones whose sizes are bigger than current max size will be skipped,
-     * and the corresponding file will be deleted.
-     *
-     * @return List of entries.
-     */
-    synchronized List<LruCacheWrapper.Entry<String, ValueWrapper>> restoreJournal() {
-        File journalFile = getJournalFile();
-        if (!journalFile.exists()) {
-            return null;
-        }
-
-        List<LruCacheWrapper.Entry<String, ValueWrapper>> list = new ArrayList<>();
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(journalFile));
-            String hashKey;
-            while ((hashKey = br.readLine()) != null) {
-                File cacheFile = getCacheFile(mCacheDir, hashKey);
-                if (!cacheFile.exists()) {
-                    continue;
-                } else if (cacheFile.length() > maxSize()) {
-                    // The cache file does not fit in the current cache
-                    // so delete it
-                    //noinspection ResultOfMethodCallIgnored
-                    cacheFile.delete();
-                    continue;
-                }
-                list.add(new LruCacheWrapper.Entry<>(hashKey, new ValueWrapper((int) cacheFile.length())));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException ignored) {
-                }
-            }
-        }
-
-        return list;
-    }
-
-    /**
-     * Returns a {@code File} object refers to the journal file.
-     */
-    private File getJournalFile() {
-        //noinspection SpellCheckingInspection
-        return new File(mCacheDir, "fusioncache.journal");
-    }
-
-    private static File getCacheFile(File cacheDir, String hashKey) {
-        // Use ".0" suffix for compatibility with DiskLruCache
-        return new File(cacheDir, hashKey + ".0");
+        return mDiskLruCache.maxSize();
     }
 
     /**
@@ -478,7 +374,7 @@ public class DiskCache extends AbstractCache {
 
     /**
      * Convert bytes to hex string,
-     * working for {@link #hashKeyForDisk(java.lang.String)}
+     * working for {@link #hashKeyForDisk(String)}
      */
     private static String bytesToHexString(byte[] bytes) {
         // http://stackoverflow.com/questions/332079
@@ -491,49 +387,5 @@ public class DiskCache extends AbstractCache {
             sb.append(hex);
         }
         return sb.toString();
-    }
-
-    /**
-     * A value wrapper for disk cache items,
-     * used to keep sizes of cache files.
-     */
-    static class ValueWrapper {
-        int size;
-
-        public ValueWrapper(int size) {
-            this.size = size;
-        }
-
-        @Override
-        public String toString() {
-            return "ValueWrapper{" +
-                    "size=" + size +
-                    '}';
-        }
-    }
-
-    /**
-     * Implements some delegate methods of {@code LruCache}.
-     */
-    private static class LruCacheDelegate implements LruCacheWrapper.Delegate<String, ValueWrapper> {
-        private File mCacheDir;
-
-        public LruCacheDelegate(File cacheDir) {
-            mCacheDir = cacheDir;
-        }
-
-        @Override
-        public int sizeOf(String key, ValueWrapper valueWrapper) {
-            return valueWrapper.size;
-        }
-
-        @Override
-        public void entryRemoved(boolean evicted, String hashKey, ValueWrapper oldValue, ValueWrapper newValue) {
-            if (evicted) {
-                File file = getCacheFile(mCacheDir, hashKey);
-                //noinspection ResultOfMethodCallIgnored
-                file.delete();
-            }
-        }
     }
 }

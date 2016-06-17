@@ -41,6 +41,8 @@ API 文档：[http://richardchien.github.io/fusion-cache-android/](http://richar
 
 这两个类的内部都采用了经过一定修改的 `LruCache` 来实现 LRU 缓存。`MemCache` 直接由 `LruCache` 来维护对象的强引用，而 `DiskCache` 使用 `LruCache` 来维护缓存文件的文件名（键）和文件大小，具体文件存储在缓存目录下。
 
+注：v1.0.0-beta3 新增了基于 `DiskLruCache` 的 `DiskCache2`，现在 `FusionCache` 类默认使用这个类作为磁盘缓存。另外，为了保证和 `DiskCache2` 的兼容性，`DiskCache` 的缓存文件的文件名也使用了 `.0` 后缀。在实际使用中，如果需要单独使用磁盘缓存，可以随意选择 `DiskCache` 或 `DiskCache2`。
+
 ## 用法
 
 添加 Gradle 依赖：
@@ -53,7 +55,7 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta2'
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta3'
 }
 ```
 
@@ -138,6 +140,8 @@ Clearing cache: All items in both memory and disk cache will be deleted, even th
 
 These two classes both use modified `LruCache` to achieve LRU cache. `MemCache` uses `LruCache` to maintain strong references of objects, and `DiskCache` uses `LruCache` to maintain names (key) and sizes of the cache files while the actual files are stored in the cache directory.
 
+Note: In v1.0.0-beta3, a new class `DiskCache2`, which is based on `DiskLruCache`, was added. Now `FusionCache` defaultly use `DiskCache2` as disk cache. In addition, for the compatibility with `DiskCache2`, `DiskCache` is now using `.0` suffix for cache file name. If you need to use separate disk cache, choose `DiskCache` or `DiskCache2` as you like.
+
 ## Usage
 
 Add dependency in `build.gradle`:
@@ -150,7 +154,7 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta2'
+    compile 'com.github.richardchien:fusion-cache-android:v1.0.0-beta3'
 }
 ```
 

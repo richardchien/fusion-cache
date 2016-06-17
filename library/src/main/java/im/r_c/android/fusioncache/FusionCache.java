@@ -63,7 +63,7 @@ public class FusionCache extends AbstractCache {
 
     private WeakReference<Context> mAppContextRef;
     private MemCache mMemCache;
-    private DiskCache mDiskCache;
+    private DiskCache2 mDiskCache;
     private boolean mFusionModeEnabled;
 
     public FusionCache(Context context, long maxMemCacheSize, long maxDiskCacheSize) {
@@ -105,7 +105,7 @@ public class FusionCache extends AbstractCache {
             mMemCache = new MemCache(maxMemCacheSize);
         }
         if (maxDiskCacheSize > 0) {
-            mDiskCache = new DiskCache(diskCacheDir, maxDiskCacheSize);
+            mDiskCache = new DiskCache2(diskCacheDir, maxDiskCacheSize);
         }
     }
 
@@ -121,7 +121,7 @@ public class FusionCache extends AbstractCache {
      * Returns the {@link #mDiskCache},
      * or null if max disk cache size is non-positive.
      */
-    public DiskCache getDiskCache() {
+    public DiskCache2 getDiskCache() {
         return mDiskCache;
     }
 

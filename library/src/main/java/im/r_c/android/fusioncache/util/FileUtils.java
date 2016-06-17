@@ -25,6 +25,8 @@ import android.content.Context;
 import android.os.Environment;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 /**
  * FusionCache
@@ -54,7 +56,7 @@ public class FileUtils {
 
     /**
      * Get the system's default cache directory.
-     *
+     * <p>
      * Note: Only when the SD card is mounted and it's not removable
      * will this method returns the external cache dir in /sdcard/Android/data,
      * otherwise it returns the inner cache dir in /data/data.
@@ -71,5 +73,19 @@ public class FileUtils {
             rootCacheDir = context.getCacheDir();
         }
         return new File(rootCacheDir, cacheDirName);
+    }
+
+    /**
+     * Get file size from FileInputStream object.
+     *
+     * @return Size of file, or -1 if an IOException occurred.
+     */
+    public static long getFileSize(FileInputStream fis) {
+        long size = -1;
+        try {
+            size = fis.getChannel().size();
+        } catch (IOException ignored) {
+        }
+        return size;
     }
 }
