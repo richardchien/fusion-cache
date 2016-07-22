@@ -40,3 +40,6 @@ Thumbs.db
 
 # OSX files
 .DS_Store
+
+# Doc files
+doc/
