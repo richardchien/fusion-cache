@@ -106,7 +106,7 @@ cache.getDiskCache();
 
 <a name="en">
 
-This is a fusion cache library with mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
+This is a cache library which mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
 
 The `FusionCache` class gives you a dynamic mixed cache. Also, you can just use `MemCache` or `DiskCache` separately, instead of `FusionCache`.
 
