@@ -1,4 +1,4 @@
-# FusionCache for Android
+# FusionCache
 
 [![License](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/richardchien/fusion-cache-android/blob/master/LICENSE)
 [![Release](https://jitpack.io/v/richardchien/fusion-cache-android.svg)](https://jitpack.io/#richardchien/fusion-cache-android)
@@ -7,11 +7,11 @@
 
 <a name="zh">
 
-这是一个内存和磁盘混合的缓存框架，采用 LRU 算法，内部动态地将缓存的内容在内存缓存和磁盘缓存之间移动，从而保证最近访问的项目在内存中，而较老的缓存在磁盘或被删除（磁盘缓存满了的情况下）。
+这是一个内存和磁盘混合的 Android 缓存框架，采用 LRU 算法，内部动态地将缓存的内容在内存缓存和磁盘缓存之间移动，从而保证最近访问的项目在内存中，而较老的缓存在磁盘或被删除（磁盘缓存满了的情况下）。
 
 动态混合缓存由 `FusionCache` 类实现，你也可以不用它，单独使用 `MemCache` 或 `DiskCache` 类来分别做内存和磁盘缓存。
 
-API 文档：[http://richardchien.github.io/fusion-cache-android/](http://richardchien.github.io/fusion-cache-android/)
+API 文档：[http://richardchien.github.io/fusion-cache/](http://richardchien.github.io/fusion-cache/)
 
 ## 动态机制／原理
 
@@ -106,11 +106,11 @@ cache.getDiskCache();
 
 <a name="en">
 
-This is a cache library which mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
+This is a cache library for Android which mixes memory and disk cache together, using LRU algorithm. It moves cache values dynamically from memory to disk or from disk to memory, so that it can ensure that the most recently accessed items are in memory, and the elder ones are in disk or removed (if the disk cache is full).
 
 The `FusionCache` class gives you a dynamic mixed cache. Also, you can just use `MemCache` or `DiskCache` separately, instead of `FusionCache`.
 
-API docs: [http://richardchien.github.io/fusion-cache-android/](http://richardchien.github.io/fusion-cache-android/)
+API docs: [http://richardchien.github.io/fusion-cache/](http://richardchien.github.io/fusion-cache/)
 
 ## Mechanism / Principle
 
